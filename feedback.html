@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feedback — dMood Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #050505;
+      --surface: #0a0a0a;
+      --surface-2: #111;
+      --border: #222222;
+      --border-2: #2e2e2e;
+      --text: #ffffff;
+      --text-2: #9b9b9b;
+      --text-3: #777777;
+      --text-4: #555;
+      --accent: #8eff01;
+      --accent-bg: #121a04;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', system-ui, sans-serif;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #222;
+      border-radius: 3px;
+    }
+
+    .viewer {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ─── Topbar ─── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 52px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .logo-link {
+      display: block;
+      height: 28px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .logo-link img {
+      height: 28px;
+      width: auto;
+      display: block;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .logo-link:hover img {
+      opacity: 1;
+    }
+
+    .topbar-center {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .device-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+    }
+
+    .badge-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #ccc;
+    }
+
+    .badge-dims {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text-3);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-newtab {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 18px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--sans);
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .btn-newtab:hover {
+      opacity: 0.85;
+    }
+
+    /* ─── Layout ─── */
+    .feedback-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .feedback-main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      position: relative;
+    }
+
+    .frame-shell {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 32px 80px rgba(0, 0, 0, 0.3);
+      transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+        height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: reveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .frame-shell iframe {
+      display: block;
+      border: none;
+      background: #fff;
+      transform-origin: top left;
+    }
+
+    /* ─── Comment overlay + markers ─── */
+    .comment-overlay {
+      position: absolute;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .comment-marker {
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: rgba(142, 255, 1, 0.12);
+      border: 1.5px solid rgba(142, 255, 1, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      line-height: 1;
+      opacity: 0.55;
+      cursor: pointer;
+      pointer-events: auto;
+      transform: translate(-50%, -50%);
+      transition: opacity 0.15s, transform 0.15s;
+      z-index: 21;
+    }
+
+    .comment-marker:hover {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+
+    .comment-marker.highlight {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.4);
+      transition: transform 0.3s, opacity 0.3s;
+    }
+
+    .comment-marker .marker-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 11px;
+      color: var(--text-2);
+      font-family: var(--sans);
+      white-space: normal;
+      max-width: 220px;
+      line-height: 1.5;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    .comment-marker:hover .marker-tooltip {
+      display: block;
+    }
+
+    /* ─── Feedback panel (sidebar) ─── */
+    .feedback-panel {
+      width: 300px;
+      flex-shrink: 0;
+      border-left: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .feedback-panel-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .feedback-count {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text-3);
+      background: var(--surface-2);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .feedback-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .feedback-group-title {
+      padding: 10px 16px 6px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 1;
+    }
+
+    .feedback-item {
+      padding: 10px 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.03);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+
+    .feedback-item:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .feedback-item-desc {
+      font-size: 12px;
+      color: var(--text-2);
+      line-height: 1.5;
+      margin-bottom: 4px;
+    }
+
+    .feedback-item-meta {
+      font-size: 10px;
+      color: var(--text-3);
+      font-family: var(--mono);
+    }
+
+    .feedback-empty {
+      padding: 40px 16px;
+      text-align: center;
+      color: var(--text-3);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    /* ─── Error state ─── */
+    .error-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      gap: 16px;
+      text-align: center;
+    }
+
+    .error-overlay.visible {
+      display: flex;
+    }
+
+    .error-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-2);
+    }
+
+    .error-desc {
+      font-size: 12px;
+      color: var(--text-3);
+      max-width: 320px;
+      line-height: 1.6;
+    }
+
+    /* ─── Footer ─── */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 24px;
+      height: 36px;
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .footer-text {
+      font-size: 10px;
+      color: var(--text-4);
+      letter-spacing: 0.04em;
+    }
+
+    .footer-text a {
+      color: var(--text-3);
+      text-decoration: none;
+    }
+
+    .footer-text a:hover {
+      color: var(--text-2);
+    }
+
+    @keyframes reveal {
+      from {
+        opacity: 0;
+        transform: scale(0.97);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .topbar-center {
+        position: static;
+        transform: none;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .feedback-panel {
+        display: none;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .topbar {
+        padding: 0 12px;
+        height: 48px;
+        gap: 6px;
+      }
+
+      .topbar-center {
+        position: static;
+        transform: none;
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+      }
+
+      .btn-newtab span {
+        display: none;
+      }
+
+      .footer {
+        height: 32px;
+        padding: 8px 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="viewer">
+    <div class="topbar">
+      <a class="logo-link" href="/" title="dMood Labs">
+        <img src="assets/logo.svg" alt="Logo">
+      </a>
+
+      <div class="topbar-center">
+        <div class="device-badge">
+          <span class="badge-name" id="badgeName">--</span>
+          <span class="badge-dims" id="badgeDims">-- x --</span>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <a class="btn-newtab" id="openBtn" href="#" target="_blank" rel="noopener noreferrer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+          <span>Open in new tab</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="feedback-layout">
+      <div class="feedback-main" id="canvas">
+        <div class="frame-shell" id="frameShell"></div>
+        <div class="comment-overlay" id="commentOverlay"></div>
+
+        <div class="error-overlay" id="errorOverlay">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.2"
+            stroke-linecap="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4" />
+            <path d="M12 16h.01" />
+          </svg>
+          <p class="error-title">Unable to load preview</p>
+          <p class="error-desc">This site may not allow embedding. You can open it directly instead.</p>
+          <a class="btn-newtab" id="errorOpenBtn" href="#" target="_blank" rel="noopener noreferrer"
+            style="margin-top:8px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+            <span>Open in new tab</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="feedback-panel">
+        <div class="feedback-panel-header">
+          <span>Feedback</span>
+          <span class="feedback-count" id="feedbackCount">0</span>
+        </div>
+        <div class="feedback-list" id="feedbackList">
+          <div class="feedback-empty">No feedback yet. Comments added by reviewers will appear here in real time.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span class="footer-text">Powered by <a href="/">dMood Labs</a></span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // ─── Parse params ───
+      var params = new URLSearchParams(window.location.search);
+      var url = params.get('url');
+      var currentW = parseInt(params.get('w')) || 390;
+      var currentH = parseInt(params.get('h')) || 844;
+      var deviceName = params.get('device') || 'Preview';
+
+      if (!url) {
+        document.getElementById('errorOverlay').classList.add('visible');
+        document.querySelector('.error-title').textContent = 'No URL provided';
+        document.querySelector('.error-desc').textContent = 'This feedback link is missing a URL parameter.';
+        return;
+      }
+
+      // ─── DOM refs ───
+      var canvas = document.getElementById('canvas');
+      var shell = document.getElementById('frameShell');
+      var overlay = document.getElementById('errorOverlay');
+      var commentOverlay = document.getElementById('commentOverlay');
+
+      document.getElementById('openBtn').href = url;
+      document.getElementById('errorOpenBtn').href = url;
+      document.getElementById('badgeName').textContent = deviceName;
+      document.getElementById('badgeDims').textContent = currentW + ' \u00d7 ' + currentH;
+      document.title = deviceName + ' Feedback \u2014 dMood Labs';
+
+      // ─── Firebase init ───
+      // TODO: Replace with your Firebase project config (same as view.html)
+      var firebaseConfig = {
+        apiKey: "AIzaSyAosC2l0YvIoSHoX2iIiQNRNGl-2uk1I_4",
+        authDomain: "dmood-deviceview.firebaseapp.com",
+        databaseURL: "https://dmood-deviceview-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "dmood-deviceview",
+        storageBucket: "dmood-deviceview.firebasestorage.app",
+        messagingSenderId: "528636137555",
+        appId: "1:528636137555:web:b798aefbab8ca8456ef6a6",
+        measurementId: "G-XRT5L1LLXH"
+      };
+
+      var firebaseReady = false;
+      var commentsRef = null;
+      try {
+        if (typeof firebase !== 'undefined' && firebase.initializeApp) {
+          firebase.initializeApp(firebaseConfig);
+          var db = firebase.database();
+          var shareId = (function () {
+            var raw = (url || '') + '|' + currentW + '|' + currentH;
+            return btoa(raw).replace(/[^a-zA-Z0-9]/g, '').substring(0, 40);
+          })();
+          commentsRef = db.ref('comments/' + shareId);
+          firebaseReady = true;
+        }
+      } catch (e) {
+        console.warn('Firebase init failed:', e);
+      }
+
+      // ─── Categories ───
+      var CATEGORIES = {
+        color: { icon: '\u{1F3A8}', label: 'Color' },
+        text: { icon: '\u{270F}\u{FE0F}', label: 'Text' },
+        layout: { icon: '\u{1F4D0}', label: 'Layout' },
+        content: { icon: '\u{1F4C4}', label: 'Content' },
+        bug: { icon: '\u{1F41B}', label: 'Bug' },
+        other: { icon: '\u{1F4AC}', label: 'Other' }
+      };
+
+      var comments = {};
+
+      // ─── Render ───
+      function calcAutoScale() {
+        var rect = canvas.getBoundingClientRect();
+        var s = Math.min((rect.width - 60) / currentW, (rect.height - 60) / currentH, 1);
+        return Math.max(s, 0.1);
+      }
+
+      var currentScale = 0.5;
+
+      function render() {
+        currentScale = calcAutoScale();
+        shell.style.width = (currentW * currentScale) + 'px';
+        shell.style.height = (currentH * currentScale) + 'px';
+
+        var iframe = shell.querySelector('iframe');
+        if (iframe) {
+          iframe.style.width = currentW + 'px';
+          iframe.style.height = currentH + 'px';
+          iframe.style.transform = 'scale(' + currentScale + ')';
+        }
+
+        positionOverlay();
+        renderMarkers();
+      }
+
+      // ─── Overlay positioning ───
+      function positionOverlay() {
+        if (!commentOverlay) return;
+        var shellRect = shell.getBoundingClientRect();
+        var canvasRect = canvas.getBoundingClientRect();
+        commentOverlay.style.left = (shellRect.left - canvasRect.left) + 'px';
+        commentOverlay.style.top = (shellRect.top - canvasRect.top) + 'px';
+        commentOverlay.style.width = shellRect.width + 'px';
+        commentOverlay.style.height = shellRect.height + 'px';
+      }
+
+      // ─── Create iframe ───
+      var iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.title = 'Preview';
+      iframe.setAttribute('referrerpolicy', 'no-referrer');
+      iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+      iframe.style.background = '#fff';
+      iframe.style.display = 'block';
+      iframe.style.border = 'none';
+      iframe.style.transformOrigin = 'top left';
+      iframe.style.width = currentW + 'px';
+      iframe.style.height = currentH + 'px';
+
+      var loadTimer = setTimeout(function () {
+        overlay.classList.add('visible');
+      }, 10000);
+
+      iframe.onload = function () { clearTimeout(loadTimer); };
+      iframe.onerror = function () { clearTimeout(loadTimer); overlay.classList.add('visible'); };
+
+      shell.appendChild(iframe);
+      render();
+
+      // ─── Resize ───
+      var rt;
+      window.addEventListener('resize', function () {
+        clearTimeout(rt);
+        rt = setTimeout(render, 80);
+      });
+
+      // ─── Markers ───
+      function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      function renderMarkers() {
+        if (!commentOverlay) return;
+        var old = commentOverlay.querySelectorAll('.comment-marker');
+        for (var i = 0; i < old.length; i++) old[i].remove();
+
+        var keys = Object.keys(comments);
+        for (var k = 0; k < keys.length; k++) {
+          var id = keys[k];
+          var c = comments[id];
+          if (!c) continue;
+          var cat = CATEGORIES[c.category] || CATEGORIES.other;
+
+          var leftPx = (c.x / 100) * currentW * currentScale;
+          var topPx = (c.y / 100) * currentH * currentScale;
+
+          var marker = document.createElement('div');
+          marker.className = 'comment-marker';
+          marker.dataset.id = id;
+          marker.style.left = leftPx + 'px';
+          marker.style.top = topPx + 'px';
+          marker.innerHTML = '<span>' + cat.icon + '</span>' +
+            '<div class="marker-tooltip"><strong>' + cat.label + '</strong><br>' + escapeHtml(c.description) +
+            '<br><span style="opacity:0.5;font-size:10px">' + escapeHtml(c.author || '') + '</span></div>';
+
+          commentOverlay.appendChild(marker);
+        }
+      }
+
+      // ─── Feedback list ───
+      var CAT_ORDER = ['bug', 'layout', 'color', 'text', 'content', 'other'];
+
+      function renderFeedbackList() {
+        var list = document.getElementById('feedbackList');
+        var count = document.getElementById('feedbackCount');
+        var keys = Object.keys(comments);
+        count.textContent = keys.length;
+
+        if (keys.length === 0) {
+          list.innerHTML = '<div class="feedback-empty">No feedback yet. Comments added by reviewers will appear here in real time.</div>';
+          return;
+        }
+
+        // Group by category
+        var groups = {};
+        for (var i = 0; i < keys.length; i++) {
+          var c = comments[keys[i]];
+          var catKey = c.category || 'other';
+          if (!groups[catKey]) groups[catKey] = [];
+          groups[catKey].push({ id: keys[i], data: c });
+        }
+
+        var html = '';
+        for (var j = 0; j < CAT_ORDER.length; j++) {
+          var gk = CAT_ORDER[j];
+          if (!groups[gk]) continue;
+          var cat = CATEGORIES[gk];
+          // Sort by createdAt descending
+          groups[gk].sort(function (a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
+
+          html += '<div class="feedback-group-title">' + cat.icon + ' ' + cat.label + ' (' + groups[gk].length + ')</div>';
+          for (var k = 0; k < groups[gk].length; k++) {
+            var item = groups[gk][k];
+            var date = new Date(item.data.createdAt || 0);
+            var timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            html += '<div class="feedback-item" data-id="' + item.id + '">';
+            html += '<div class="feedback-item-desc">' + escapeHtml(item.data.description) + '</div>';
+            html += '<div class="feedback-item-meta">' + escapeHtml(item.data.author || '') + ' \u00b7 ' + timeStr + '</div>';
+            html += '</div>';
+          }
+        }
+
+        list.innerHTML = html;
+      }
+
+      // Click feedback item → highlight marker
+      document.getElementById('feedbackList').addEventListener('click', function (e) {
+        var item = e.target.closest('.feedback-item');
+        if (!item) return;
+        var id = item.dataset.id;
+        var marker = commentOverlay.querySelector('.comment-marker[data-id="' + id + '"]');
+        if (!marker) return;
+
+        // Remove previous highlights
+        var all = commentOverlay.querySelectorAll('.comment-marker.highlight');
+        for (var i = 0; i < all.length; i++) all[i].classList.remove('highlight');
+
+        marker.classList.add('highlight');
+        setTimeout(function () { marker.classList.remove('highlight'); }, 1500);
+      });
+
+      // ─── Firebase listener ───
+      if (firebaseReady && commentsRef) {
+        commentsRef.on('value', function (snapshot) {
+          comments = snapshot.val() || {};
+          renderMarkers();
+          renderFeedbackList();
+        });
+      }
+    })();
+  </script>
+</body>
+
+</html>

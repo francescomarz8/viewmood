@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeviceView — dMood Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #050505;
+      --surface: #0a0a0a;
+      --surface-2: #111;
+      --border: #222222;
+      --border-2: #2e2e2e;
+      --text: #ffffff;
+      --text-2: #9b9b9b;
+      --text-3: #777777;
+      --text-4: #555;
+      --accent: #8eff01;
+      --accent-dim: rgba(142, 255, 1, 0.08);
+      --accent-bg: #121a04;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', system-ui, sans-serif;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #222;
+      border-radius: 3px;
+    }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+    }
+
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+
+    /* ─── Layout ─── */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ─── Top Bar ─── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 20px;
+      height: 54px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-right: 4px;
+      flex-shrink: 0;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .logo-img {
+      height: 24px;
+      width: auto;
+      opacity: 0.7;
+    }
+
+    .logo-sep {
+      color: #333;
+      font-size: 20px;
+      line-height: 1;
+      margin: 0 2px;
+    }
+
+    .logo-sub {
+      color: var(--text-3);
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .url-bar {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0 5px 0 14px;
+      height: 36px;
+      max-width: 540px;
+      transition: border-color 0.2s;
+    }
+
+    .url-bar:focus-within {
+      border-color: var(--border-2);
+    }
+
+    .url-bar svg {
+      flex-shrink: 0;
+      margin-right: 10px;
+    }
+
+    .url-bar input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text-2);
+      font-size: 12.5px;
+      font-family: var(--mono);
+    }
+
+    .url-bar input::placeholder {
+      color: var(--text-4);
+    }
+
+    .btn-preview {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 7px;
+      padding: 6px 18px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--sans);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+
+    .btn-preview:hover {
+      opacity: 0.85;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .btn-ghost {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: transparent;
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      font-family: var(--sans);
+      flex-shrink: 0;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--border-2);
+      color: #ccc;
+    }
+
+    .btn-share {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 18px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--sans);
+      letter-spacing: 0.01em;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .btn-share:hover {
+      opacity: 0.88;
+    }
+
+    .btn-share.copied {
+      background: #6bcc00;
+    }
+
+    /* ─── Body ─── */
+    .body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      width: 230px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .cat-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      padding: 0 2px;
+    }
+
+    .cat-tab {
+      flex: 1;
+      padding: 11px 0;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-3);
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--sans);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      transition: all 0.15s;
+    }
+
+    .cat-tab:hover {
+      color: var(--text-2);
+    }
+
+    .cat-tab.active {
+      color: #fff;
+      border-bottom-color: var(--accent);
+    }
+
+    .device-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 5px;
+    }
+
+    .device-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px 10px;
+      background: transparent;
+      border: none;
+      border-radius: 7px;
+      cursor: pointer;
+      font-family: var(--sans);
+      color: var(--text-3);
+      text-align: left;
+      transition: all 0.12s;
+    }
+
+    .device-btn:hover {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-2);
+    }
+
+    .device-btn.active {
+      background: #141414;
+      color: #fff;
+    }
+
+    .device-btn .icon {
+      font-size: 15px;
+      flex-shrink: 0;
+    }
+
+    .device-btn .info {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      min-width: 0;
+    }
+
+    .device-btn .name {
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .device-btn .dims {
+      font-size: 10px;
+      font-family: var(--mono);
+      opacity: 0.5;
+    }
+
+    .device-btn .dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .custom-panel {
+      padding: 16px;
+      flex: 1;
+    }
+
+    .custom-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .custom-label+.custom-label {
+      margin-top: 14px;
+    }
+
+    .custom-input {
+      width: 100%;
+      padding: 8px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: #fff;
+      font-size: 13px;
+      font-family: var(--mono);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .custom-input:focus {
+      border-color: var(--border-2);
+    }
+
+    .quick-row {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+
+    .quick-label {
+      font-size: 10px;
+      color: var(--text-3);
+      font-weight: 500;
+    }
+
+    .quick-btn {
+      padding: 4px 10px;
+      background: #141414;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text-2);
+      font-size: 10px;
+      cursor: pointer;
+      font-family: var(--mono);
+      transition: all 0.15s;
+    }
+
+    .quick-btn:hover {
+      border-color: var(--border-2);
+      color: #fff;
+    }
+
+    .sidebar-section {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    .orient-btns,
+    .zoom-btns {
+      display: flex;
+      gap: 3px;
+    }
+
+    .orient-btn,
+    .zoom-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text-3);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .orient-btn {
+      width: 32px;
+      height: 28px;
+    }
+
+    .zoom-btn {
+      padding: 4px 8px;
+      font-size: 10px;
+      font-family: var(--mono);
+      min-width: 34px;
+      height: 28px;
+    }
+
+    .orient-btn:hover,
+    .zoom-btn:hover {
+      border-color: var(--border-2);
+      color: var(--text-2);
+    }
+
+    .orient-btn.active,
+    .zoom-btn.active {
+      background: #1a1a1a;
+      border-color: #333;
+      color: #fff;
+    }
+
+    .zoom-section {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .sidebar-hint {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 10px;
+      color: var(--text-3);
+      line-height: 1.5;
+      margin-top: auto;
+    }
+
+    .sidebar-hint svg {
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    /* ─── Preview ─── */
+    .preview {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      position: relative;
+      background:
+        radial-gradient(ellipse at 50% 40%, rgba(142, 255, 1, 0.015) 0%, transparent 60%),
+        var(--bg);
+    }
+
+    .preview::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background-image: radial-gradient(circle, #1c1c1c 0.7px, transparent 0.7px);
+      background-size: 32px 32px;
+      mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      z-index: 1;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .empty-icon {
+      margin-bottom: 24px;
+      opacity: 0.5;
+    }
+
+    .empty-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-2);
+      margin-bottom: 8px;
+    }
+
+    .empty-desc {
+      font-size: 13px;
+      color: var(--text-3);
+      max-width: 300px;
+      line-height: 1.6;
+      margin: 0 auto;
+    }
+
+    .frame-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+      animation: fadeUp 0.35s ease both;
+    }
+
+    .device-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 16px;
+      background: rgba(15, 15, 15, 0.9);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      backdrop-filter: blur(12px);
+    }
+
+    .badge-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #bbb;
+    }
+
+    .badge-dims {
+      font-size: 10.5px;
+      font-family: var(--mono);
+      color: var(--text-3);
+    }
+
+    .badge-scale {
+      font-size: 9.5px;
+      font-family: var(--mono);
+      color: var(--accent);
+      background: var(--accent-bg);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    .frame-container {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 4px 16px rgba(0, 0, 0, 0.3),
+        0 24px 64px rgba(0, 0, 0, 0.4);
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+        height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .frame-container iframe {
+      display: block;
+      border: none;
+      background: #fff;
+      transform-origin: top left;
+    }
+
+    /* ─── Share toast ─── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      padding: 10px 20px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 10px;
+      font-size: 12.5px;
+      color: #ccc;
+      font-family: var(--sans);
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.25s ease;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast svg {
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spinner {
+      width: 12px;
+      height: 12px;
+      border: 2px solid #222;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @media (max-width: 700px) {
+      .sidebar {
+        display: none;
+      }
+
+      .logo-sub,
+      .logo-sep {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <div class="topbar">
+      <a class="logo" href="/">
+        <img class="logo-img" src="assets/logo.svg" alt="dMood Labs">
+        <span class="logo-sep">|</span>
+        <span class="logo-sub">DeviceView</span>
+      </a>
+
+      <div class="url-bar">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2"
+          stroke-linecap="round">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+        <input type="text" id="urlInput" placeholder="Enter URL — e.g. greenback-app.dmoodlabs.com">
+        <button class="btn-preview" onclick="loadPreview()">Preview</button>
+      </div>
+
+      <div class="topbar-actions">
+        <a class="btn-ghost" id="openBtn" href="#" target="_blank" rel="noopener noreferrer" style="display:none">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+          Open
+        </a>
+        <button class="btn-share" id="shareBtn" onclick="sharePreview()" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3" />
+            <circle cx="6" cy="12" r="3" />
+            <circle cx="18" cy="19" r="3" />
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+          Share
+        </button>
+        <a class="btn-ghost" id="feedbackBtn" href="#" target="_blank" rel="noopener noreferrer" style="display:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          Feedback
+        </a>
+      </div>
+    </div>
+
+    <div class="body">
+      <div class="sidebar">
+        <div class="cat-tabs" id="catTabs"></div>
+        <div id="devicePanel"></div>
+
+        <div class="sidebar-section" id="orientSection">
+          <span class="section-label">Orientation</span>
+          <div class="orient-btns">
+            <button class="orient-btn active" id="orientPortrait" onclick="setOrientation('portrait')" title="Portrait">
+              <svg width="12" height="16" viewBox="0 0 14 18" fill="none">
+                <rect x="0.5" y="0.5" width="13" height="17" rx="2" stroke="currentColor" stroke-width="1.2" />
+                <circle cx="7" cy="15" r="1" fill="currentColor" />
+              </svg>
+            </button>
+            <button class="orient-btn" id="orientLandscape" onclick="setOrientation('landscape')" title="Landscape">
+              <svg width="16" height="12" viewBox="0 0 18 14" fill="none">
+                <rect x="0.5" y="0.5" width="17" height="13" rx="2" stroke="currentColor" stroke-width="1.2" />
+                <circle cx="15" cy="7" r="1" fill="currentColor" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="sidebar-section zoom-section">
+          <span class="section-label">Zoom</span>
+          <div class="zoom-btns" id="zoomBtns"></div>
+        </div>
+
+        <div class="sidebar-hint">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#777" stroke-width="2"
+            stroke-linecap="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+          </svg>
+          <span>Click <strong style="color:#9b9b9b">Share</strong> to generate a minimal preview link for
+            clients.</span>
+        </div>
+      </div>
+
+      <div class="preview" id="previewArea">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1"
+              stroke-linecap="round">
+              <rect x="2" y="3" width="20" height="14" rx="2" />
+              <path d="M8 21h8" />
+              <path d="M12 17v4" />
+            </svg>
+          </div>
+          <p class="empty-title">Enter a URL to preview</p>
+          <p class="empty-desc">See how any website renders across different devices, then share a branded preview link
+            with your clients.</p>
+        </div>
+
+        <div class="frame-wrap" id="frameWrap" style="display:none">
+          <div class="device-badge">
+            <span class="badge-name" id="badgeName">—</span>
+            <span class="badge-dims" id="badgeDims">— × —</span>
+            <span class="badge-scale" id="badgeScale">—</span>
+            <span id="loadIndicator"></span>
+          </div>
+          <div class="frame-container" id="frameContainer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+      stroke-linecap="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+    <span id="toastText">Link copied!</span>
+  </div>
+
+  <script>
+    // ─── Icons ───
+    const ICONS = {
+      phone: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+      tablet: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+      desktop: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+    };
+
+    // ─── Data ───
+    const DEVICES = [
+      { name: 'iPhone SE', w: 375, h: 667, cat: 'phone' },
+      { name: 'iPhone 14', w: 390, h: 844, cat: 'phone' },
+      { name: 'iPhone 14 Pro Max', w: 430, h: 932, cat: 'phone' },
+      { name: 'iPhone 16 Pro', w: 402, h: 874, cat: 'phone' },
+      { name: 'Pixel 7', w: 412, h: 915, cat: 'phone' },
+      { name: 'Samsung S24', w: 360, h: 780, cat: 'phone' },
+      { name: 'iPad Mini', w: 768, h: 1024, cat: 'tablet' },
+      { name: 'iPad Air', w: 820, h: 1180, cat: 'tablet' },
+      { name: 'iPad Pro 12.9"', w: 1024, h: 1366, cat: 'tablet' },
+      { name: 'Surface Pro', w: 912, h: 1368, cat: 'tablet' },
+      { name: 'Laptop HD', w: 1366, h: 768, cat: 'desktop' },
+      { name: 'Desktop FHD', w: 1920, h: 1080, cat: 'desktop' },
+      { name: 'Desktop QHD', w: 2560, h: 1440, cat: 'desktop' },
+      { name: 'Ultrawide', w: 3440, h: 1440, cat: 'desktop' },
+    ];
+    const CATS = [
+      { key: 'phone', label: 'Phones' },
+      { key: 'tablet', label: 'Tablets' },
+      { key: 'desktop', label: 'Desktops' },
+      { key: 'custom', label: 'Custom' },
+    ];
+    const ZOOMS = [
+      { label: 'Fit', value: null },
+      { label: '25%', value: 0.25 },
+      { label: '50%', value: 0.5 },
+      { label: '75%', value: 0.75 },
+      { label: '100%', value: 1 },
+    ];
+
+    // ─── State ───
+    let state = {
+      loadedUrl: '',
+      selectedDevice: DEVICES[1],
+      activeCat: 'phone',
+      customW: 1280,
+      customH: 720,
+      orientation: 'portrait',
+      zoom: null,
+    };
+
+    const $ = id => document.getElementById(id);
+
+    // ─── Init ───
+    function init() {
+      renderCatTabs();
+      renderDevicePanel();
+      renderZoomBtns();
+      updateOrientationUI();
+      $('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') loadPreview(); });
+    }
+
+    // ─── URL ───
+    function loadPreview() {
+      let url = $('urlInput').value.trim();
+      if (!url) return;
+      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+      state.loadedUrl = url;
+      $('openBtn').href = url;
+      $('openBtn').style.display = 'flex';
+      $('shareBtn').style.display = 'flex';
+      $('emptyState').style.display = 'none';
+      $('frameWrap').style.display = 'flex';
+      renderFrame();
+    }
+
+    // ─── Share ───
+    function sharePreview() {
+      if (!state.loadedUrl) return;
+      const w = currentW(), h = currentH();
+      const device = state.activeCat === 'custom'
+        ? `Custom ${w}×${h}`
+        : (state.selectedDevice?.name || 'Preview');
+
+      const params = new URLSearchParams({
+        url: state.loadedUrl,
+        w: w,
+        h: h,
+        device: device,
+      });
+
+      const basePath = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+      const shareUrl = basePath + 'view.html?' + params.toString();
+      const feedbackUrl = basePath + 'feedback.html?' + params.toString();
+
+      const fbBtn = document.getElementById('feedbackBtn');
+      fbBtn.href = feedbackUrl;
+      fbBtn.style.display = 'flex';
+
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        showToast('Share link copied to clipboard!');
+        const btn = $('shareBtn');
+        btn.classList.add('copied');
+        btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Share`;
+        }, 2500);
+      }).catch(() => {
+        // Fallback: show URL in a prompt
+        prompt('Copy this share link:', shareUrl);
+      });
+    }
+
+    function showToast(text) {
+      const t = $('toast');
+      $('toastText').textContent = text;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+
+    // ─── Frame ───
+    function renderFrame() {
+      const w = currentW(), h = currentH(), s = effectiveScale();
+      const container = $('frameContainer');
+      container.style.width = (w * s) + 'px';
+      container.style.height = (h * s) + 'px';
+
+      let iframe = container.querySelector('iframe');
+      const needsNew = !iframe || iframe.dataset.src !== state.loadedUrl;
+
+      if (needsNew) {
+        container.innerHTML = '';
+        iframe = document.createElement('iframe');
+        iframe.dataset.src = state.loadedUrl;
+        iframe.src = state.loadedUrl;
+        iframe.title = 'Preview';
+        iframe.setAttribute('referrerpolicy', 'no-referrer');
+        iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+        iframe.style.background = '#fff';
+        $('loadIndicator').innerHTML = '<div class="spinner"></div>';
+        iframe.onload = () => {
+          $('loadIndicator').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8eff01" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>';
+        };
+        iframe.onerror = () => {
+          $('loadIndicator').innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+        };
+        container.appendChild(iframe);
+      }
+
+      iframe.style.width = w + 'px';
+      iframe.style.height = h + 'px';
+      iframe.style.transform = `scale(${s})`;
+      iframe.style.transformOrigin = 'top left';
+      iframe.style.border = 'none';
+      iframe.style.display = 'block';
+
+      const dName = state.activeCat === 'custom' ? 'Custom' : (state.selectedDevice?.name || 'Device');
+      $('badgeName').textContent = dName;
+      $('badgeDims').textContent = `${w} × ${h}`;
+      $('badgeScale').textContent = Math.round(s * 100) + '%';
+    }
+
+    function currentW() {
+      if (state.activeCat === 'custom') return state.customW;
+      const d = state.selectedDevice;
+      return state.orientation === 'portrait' ? d.w : d.h;
+    }
+    function currentH() {
+      if (state.activeCat === 'custom') return state.customH;
+      const d = state.selectedDevice;
+      return state.orientation === 'portrait' ? d.h : d.w;
+    }
+    function effectiveScale() {
+      if (state.zoom !== null) return state.zoom;
+      const area = $('previewArea');
+      if (!area) return 0.5;
+      const rect = area.getBoundingClientRect();
+      const s = Math.min((rect.width - 80) / currentW(), (rect.height - 120) / currentH(), 1);
+      return Math.max(s, 0.1);
+    }
+
+    // ─── Categories ───
+    function renderCatTabs() {
+      $('catTabs').innerHTML = CATS.map(c =>
+        `<button class="cat-tab${c.key === state.activeCat ? ' active' : ''}" onclick="setCat('${c.key}')">${c.label}</button>`
+      ).join('');
+    }
+    function setCat(key) {
+      state.activeCat = key;
+      renderCatTabs();
+      renderDevicePanel();
+      updateOrientationUI();
+      if (state.loadedUrl) renderFrame();
+    }
+
+    // ─── Devices ───
+    function renderDevicePanel() {
+      const panel = $('devicePanel');
+      if (state.activeCat === 'custom') {
+        panel.innerHTML = `
+      <div class="custom-panel">
+        <label class="custom-label">Width (px)</label>
+        <input class="custom-input" type="number" id="cw" value="${state.customW}" oninput="setCustom()">
+        <label class="custom-label" style="margin-top:14px">Height (px)</label>
+        <input class="custom-input" type="number" id="ch" value="${state.customH}" oninput="setCustom()">
+        <div class="quick-row">
+          <span class="quick-label">Quick:</span>
+          <button class="quick-btn" onclick="setCustomVal(1280,720)">HD</button>
+          <button class="quick-btn" onclick="setCustomVal(1920,1080)">FHD</button>
+          <button class="quick-btn" onclick="setCustomVal(2560,1440)">QHD</button>
+          <button class="quick-btn" onclick="setCustomVal(3840,2160)">4K</button>
+        </div>
+      </div>`;
+        return;
+      }
+      const devices = DEVICES.filter(d => d.cat === state.activeCat);
+      panel.innerHTML = `<div class="device-list">${devices.map(d => {
+        const active = state.selectedDevice?.name === d.name;
+        return `<button class="device-btn${active ? ' active' : ''}" onclick="selectDevice('${d.name}')">
+      <span class="icon">${ICONS[d.cat]}</span>
+      <div class="info"><span class="name">${d.name}</span><span class="dims">${d.w} × ${d.h}</span></div>
+      ${active ? '<div class="dot"></div>' : ''}
+    </button>`;
+      }).join('')}</div>`;
+    }
+    function selectDevice(name) {
+      state.selectedDevice = DEVICES.find(d => d.name === name);
+      renderDevicePanel();
+      if (state.loadedUrl) renderFrame();
+    }
+    function setCustom() {
+      state.customW = parseInt(document.getElementById('cw')?.value) || 320;
+      state.customH = parseInt(document.getElementById('ch')?.value) || 480;
+      if (state.loadedUrl) renderFrame();
+    }
+    function setCustomVal(w, h) {
+      state.customW = w; state.customH = h;
+      const cw = document.getElementById('cw'), ch = document.getElementById('ch');
+      if (cw) cw.value = w; if (ch) ch.value = h;
+      if (state.loadedUrl) renderFrame();
+    }
+
+    // ─── Orientation ───
+    function setOrientation(o) {
+      state.orientation = o;
+      updateOrientationUI();
+      if (state.loadedUrl) renderFrame();
+    }
+    function updateOrientationUI() {
+      $('orientSection').style.display = state.activeCat !== 'custom' ? 'flex' : 'none';
+      $('orientPortrait').classList.toggle('active', state.orientation === 'portrait');
+      $('orientLandscape').classList.toggle('active', state.orientation === 'landscape');
+    }
+
+    // ─── Zoom ───
+    function renderZoomBtns() {
+      $('zoomBtns').innerHTML = ZOOMS.map(z =>
+        `<button class="zoom-btn${state.zoom === z.value ? ' active' : ''}" onclick="setZoom(${z.value})">${z.label}</button>`
+      ).join('');
+    }
+    function setZoom(val) {
+      state.zoom = val;
+      renderZoomBtns();
+      if (state.loadedUrl) renderFrame();
+    }
+
+    // ─── Resize ───
+    let rt;
+    window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (state.loadedUrl) renderFrame(); }, 100); });
+
+    init();
+  </script>
+</body>
+
+</html>

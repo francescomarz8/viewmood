@@ -1,0 +1,1749 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preview — dMood Labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <!-- Firebase SDK (compat/namespaced — no bundler needed) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #050505;
+      --surface: #0a0a0a;
+      --surface-2: #111;
+      --border: #222222;
+      --border-2: #2e2e2e;
+      --text: #ffffff;
+      --text-2: #9b9b9b;
+      --text-3: #777777;
+      --text-4: #555;
+      --accent: #8eff01;
+      --accent-bg: #121a04;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', system-ui, sans-serif;
+    }
+
+    html,
+    body {
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+    }
+
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+
+    .viewer {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ─── Top chrome ─── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 52px;
+      flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .logo-link {
+      display: block;
+      height: 28px;
+      text-decoration: none;
+      flex-shrink: 0;
+    }
+
+    .logo-link img,
+    .logo-link svg {
+      height: 28px;
+      width: auto;
+      display: block;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+
+    .logo-link:hover img,
+    .logo-link:hover svg {
+      opacity: 1;
+    }
+
+    .topbar-center {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* ─── Device selector trigger ─── */
+    .device-selector-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 12px 5px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--sans);
+      transition: all 0.15s;
+    }
+
+    .device-selector-btn:hover {
+      border-color: var(--border-2);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .device-selector-btn .sel-name {
+      font-size: 11px;
+      font-weight: 600;
+      color: #ccc;
+    }
+
+    .device-selector-btn .sel-dims {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text-3);
+    }
+
+    .device-selector-btn .sel-arrow {
+      color: var(--text-3);
+      flex-shrink: 0;
+    }
+
+    /* ─── Modal overlay ─── */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      width: 420px;
+      max-width: calc(100vw - 32px);
+      max-height: calc(100vh - 80px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 64px rgba(0, 0, 0, 0.6);
+      animation: modalIn 0.2s ease both;
+    }
+
+    @keyframes modalIn {
+      from {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 0;
+    }
+
+    .modal-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .modal-close {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-3);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .modal-close:hover {
+      border-color: var(--border-2);
+      color: var(--text-2);
+    }
+
+    /* ─── Modal tabs ─── */
+    .modal-tabs {
+      display: flex;
+      padding: 12px 20px 0;
+      gap: 2px;
+    }
+
+    .modal-tab {
+      flex: 1;
+      padding: 9px 0;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-3);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: var(--sans);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: all 0.15s;
+    }
+
+    .modal-tab:hover {
+      color: var(--text-2);
+    }
+
+    .modal-tab.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ─── Modal body ─── */
+    .modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .modal-body::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .modal-body::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .modal-body::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 3px;
+    }
+
+    .md-device {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 10px 12px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: var(--sans);
+      color: var(--text-3);
+      text-align: left;
+      transition: all 0.1s;
+    }
+
+    .md-device:hover {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-2);
+    }
+
+    .md-device.active {
+      background: rgba(142, 255, 1, 0.06);
+      color: var(--text);
+    }
+
+    .md-device .md-icon {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    .md-device .md-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .md-device .md-name {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .md-device .md-dims {
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text-3);
+    }
+
+    .md-device.active .md-dims {
+      color: var(--text-2);
+    }
+
+    .md-device .md-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    /* ─── Custom panel ─── */
+    .custom-panel {
+      padding: 16px 12px;
+    }
+
+    .custom-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .custom-field {
+      flex: 1;
+    }
+
+    .custom-field-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .custom-field-input {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: var(--mono);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .custom-field-input:focus {
+      border-color: var(--border-2);
+    }
+
+    .custom-presets-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+
+    .custom-presets {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .custom-preset {
+      padding: 6px 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-2);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: var(--mono);
+      transition: all 0.15s;
+    }
+
+    .custom-preset:hover {
+      border-color: var(--border-2);
+      color: var(--text);
+    }
+
+    .custom-apply {
+      width: 100%;
+      padding: 10px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--sans);
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .custom-apply:hover {
+      opacity: 0.85;
+    }
+
+    /* ─── Zoom controls ─── */
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .zoom-btn {
+      width: 30px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-3);
+      cursor: pointer;
+      font-family: var(--sans);
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1;
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .zoom-btn:hover {
+      border-color: var(--border-2);
+      color: #ccc;
+    }
+
+    .zoom-btn:active {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .zoom-level {
+      min-width: 44px;
+      text-align: center;
+      font-size: 10px;
+      font-family: var(--mono);
+      color: var(--text-3);
+      user-select: none;
+      cursor: pointer;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-newtab {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 18px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--sans);
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .btn-newtab:hover {
+      opacity: 0.85;
+    }
+
+    .btn-newtab svg {
+      flex-shrink: 0;
+    }
+
+    /* ─── Preview canvas ─── */
+    .canvas {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: auto;
+      position: relative;
+    }
+
+    .frame-shell {
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.04),
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 32px 80px rgba(0, 0, 0, 0.3);
+      transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+        height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      animation: reveal 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    .frame-shell iframe {
+      display: block;
+      border: none;
+      background: #fff;
+      transform-origin: top left;
+    }
+
+    /* ─── Footer ─── */
+    .footer {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 24px;
+      height: 36px;
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .footer-text {
+      font-size: 10px;
+      color: var(--text-4);
+      letter-spacing: 0.04em;
+    }
+
+    .footer-text a {
+      color: var(--text-3);
+      text-decoration: none;
+    }
+
+    .footer-text a:hover {
+      color: var(--text-2);
+    }
+
+    /* ─── Error state ─── */
+    .error-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      gap: 16px;
+      text-align: center;
+      animation: reveal 0.4s ease both;
+    }
+
+    .error-overlay.visible {
+      display: flex;
+    }
+
+    .error-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-2);
+    }
+
+    .error-desc {
+      font-size: 12px;
+      color: var(--text-3);
+      max-width: 320px;
+      line-height: 1.6;
+    }
+
+    @keyframes reveal {
+      from {
+        opacity: 0;
+        transform: scale(0.97);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* ─── Responsive: Tablet ─── */
+    @media (max-width: 900px) {
+      .topbar-center {
+        position: static;
+        transform: none;
+      }
+
+      .topbar {
+        gap: 8px;
+      }
+    }
+
+    /* ─── Comment mode toggle ─── */
+    .btn-comment {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      background: transparent;
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .btn-comment:hover {
+      border-color: var(--border-2);
+      color: #ccc;
+    }
+
+    .btn-comment.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
+    /* ─── Comment overlay ─── */
+    .comment-overlay {
+      position: absolute;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .comment-overlay.active {
+      pointer-events: auto;
+      cursor: crosshair;
+    }
+
+    .comment-overlay.active .comment-marker {
+      cursor: move;
+    }
+
+    /* ─── Comment markers ─── */
+    .comment-marker {
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #000;
+      border: 2px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      line-height: 1;
+      opacity: 0.5;
+      cursor: pointer;
+      pointer-events: auto;
+      transform: translate(-50%, -50%);
+      transition: opacity 0.15s, transform 0.15s;
+      z-index: 21;
+    }
+
+    .comment-marker:hover {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+
+    .comment-marker > span {
+      color: var(--accent);
+    }
+
+    .comment-marker .marker-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 10px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 11px;
+      color: var(--text-2);
+      font-family: var(--sans);
+      white-space: normal;
+      max-width: 220px;
+      line-height: 1.5;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      z-index: 30;
+    }
+
+    .comment-marker:hover .marker-tooltip {
+      display: block;
+    }
+
+    /* ─── Comment form (floating panel) ─── */
+    .comment-form {
+      position: fixed;
+      z-index: 100;
+      width: 340px;
+      max-width: calc(100vw - 32px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 16px 64px rgba(0, 0, 0, 0.6);
+      animation: modalIn 0.2s ease both;
+      overflow: hidden;
+    }
+
+    .comment-form-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 0;
+    }
+
+    .comment-form-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .comment-form-body {
+      padding: 12px 16px 16px;
+    }
+
+    .comment-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: block;
+      margin-bottom: 6px;
+      margin-top: 12px;
+    }
+
+    .comment-label:first-child {
+      margin-top: 0;
+    }
+
+    .comment-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .comment-chip {
+      padding: 5px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-2);
+      font-size: 11px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .comment-chip:hover {
+      border-color: var(--border-2);
+      color: var(--text);
+    }
+
+    .comment-chip.active {
+      background: rgba(142, 255, 1, 0.1);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .comment-textarea,
+    .comment-input {
+      width: 100%;
+      padding: 9px 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: var(--sans);
+      outline: none;
+      resize: vertical;
+      transition: border-color 0.2s;
+    }
+
+    .comment-textarea:focus,
+    .comment-input:focus {
+      border-color: var(--border-2);
+    }
+
+    .comment-textarea::placeholder,
+    .comment-input::placeholder {
+      color: var(--text-4);
+    }
+
+    .comment-form-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .comment-btn-submit {
+      padding: 8px 20px;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .comment-btn-submit:hover {
+      opacity: 0.85;
+    }
+
+    .comment-btn-cancel {
+      padding: 8px 14px;
+      background: transparent;
+      color: var(--text-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .comment-btn-cancel:hover {
+      border-color: var(--border-2);
+      color: #ccc;
+    }
+
+    .comment-btn-delete {
+      padding: 8px 14px;
+      background: transparent;
+      color: #f87171;
+      border: 1px solid rgba(248, 113, 113, 0.3);
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .comment-btn-delete:hover {
+      border-color: #f87171;
+    }
+
+    /* ─── Responsive: Mobile ─── */
+    @media (max-width: 600px) {
+      .topbar {
+        padding: 0 12px;
+        height: 48px;
+        gap: 6px;
+      }
+
+      .topbar-center {
+        position: static;
+        transform: none;
+        flex: 1;
+        min-width: 0;
+        justify-content: center;
+      }
+
+      .device-selector-btn {
+        gap: 6px;
+        padding: 4px 10px;
+      }
+
+      .device-selector-btn .sel-dims {
+        display: none;
+      }
+
+      .zoom-controls {
+        display: none;
+      }
+
+      .btn-newtab {
+        padding: 7px 12px;
+      }
+
+      .btn-newtab span {
+        display: none;
+      }
+
+      .modal {
+        width: 100%;
+        max-width: calc(100vw - 16px);
+        max-height: calc(100vh - 40px);
+        border-radius: 12px;
+      }
+
+      .modal-tabs {
+        padding: 10px 12px 0;
+      }
+
+      .modal-body {
+        padding: 4px;
+      }
+
+      .md-device {
+        padding: 9px 8px;
+        gap: 10px;
+      }
+
+      .footer {
+        height: 32px;
+        padding: 8px 12px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="viewer">
+
+    <div class="topbar">
+      <a class="logo-link" href="/" title="dMood Labs">
+        <img src="assets/logo.svg" alt="Logo">
+      </a>
+
+      <div class="topbar-center">
+        <button class="device-selector-btn" id="selectorBtn">
+          <span class="sel-name" id="selName">--</span>
+          <span class="sel-dims" id="selDims">-- x --</span>
+          <svg class="sel-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+        <div class="zoom-controls">
+          <button class="zoom-btn" id="zoomOut" title="Zoom out">-</button>
+          <span class="zoom-level" id="zoomLevel" title="Double-click to reset">50%</span>
+          <button class="zoom-btn" id="zoomIn" title="Zoom in">+</button>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <button class="btn-comment" id="commentToggle" title="Toggle comment mode">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <span>Comment</span>
+        </button>
+        <a class="btn-newtab" id="openBtn" href="#" target="_blank" rel="noopener noreferrer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+          <span>Open in new tab</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="canvas" id="canvas">
+      <div class="frame-shell" id="frameShell"></div>
+      <div class="comment-overlay" id="commentOverlay"></div>
+
+      <div class="error-overlay" id="errorOverlay">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#555" stroke-width="1.2"
+          stroke-linecap="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 8v4" />
+          <path d="M12 16h.01" />
+        </svg>
+        <p class="error-title">Unable to load preview</p>
+        <p class="error-desc">This site may not allow embedding. You can open it directly instead.</p>
+        <a class="btn-newtab" id="errorOpenBtn" href="#" target="_blank" rel="noopener noreferrer"
+          style="margin-top:8px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+            <polyline points="15 3 21 3 21 9" />
+            <line x1="10" y1="14" x2="21" y2="3" />
+          </svg>
+          <span>Open in new tab</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span class="footer-text">Powered by <a href="/">dMood Labs</a></span>
+    </div>
+
+  </div>
+
+  <!-- Comment Form (floating) -->
+  <div class="comment-form" id="commentForm" style="display:none">
+    <div class="comment-form-header">
+      <span class="comment-form-title" id="commentFormTitle">Add Comment</span>
+      <button class="modal-close" id="commentFormClose">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          stroke-linecap="round">
+          <line x1="18" y1="6" x2="6" y2="18" />
+          <line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    </div>
+    <div class="comment-form-body">
+      <label class="comment-label">Category</label>
+      <div class="comment-chips" id="commentChips">
+        <button class="comment-chip" data-cat="color">&#127912; Color</button>
+        <button class="comment-chip" data-cat="text">&#9999;&#65039; Text</button>
+        <button class="comment-chip" data-cat="layout">&#128208; Layout</button>
+        <button class="comment-chip" data-cat="content">&#128196; Content</button>
+        <button class="comment-chip" data-cat="bug">&#128027; Bug</button>
+        <button class="comment-chip" data-cat="other">&#128172; Other</button>
+      </div>
+      <label class="comment-label">Description</label>
+      <textarea class="comment-textarea" id="commentDesc" rows="3" placeholder="What needs to change?"></textarea>
+      <label class="comment-label">Your name or email</label>
+      <input class="comment-input" id="commentAuthor" type="text" placeholder="e.g. John or john@company.com">
+      <div class="comment-form-actions">
+        <button class="comment-btn-delete" id="commentDelete" style="display:none">Delete</button>
+        <div style="flex:1"></div>
+        <button class="comment-btn-cancel" id="commentCancel">Cancel</button>
+        <button class="comment-btn-submit" id="commentSubmit">Submit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Device Modal -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <span class="modal-title">Select Device</span>
+        <button class="modal-close" id="modalClose">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-tabs" id="modalTabs"></div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // ─── Icons ───
+      const ICONS = {
+        phone: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+        tablet: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>',
+        desktop: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+      };
+
+      // ─── Devices ───
+      const DEVICES = [
+        { name: 'iPhone SE', w: 375, h: 667, cat: 'phone' },
+        { name: 'iPhone 14', w: 390, h: 844, cat: 'phone' },
+        { name: 'iPhone 14 Pro Max', w: 430, h: 932, cat: 'phone' },
+        { name: 'iPhone 16 Pro', w: 402, h: 874, cat: 'phone' },
+        { name: 'Pixel 7', w: 412, h: 915, cat: 'phone' },
+        { name: 'Samsung S24', w: 360, h: 780, cat: 'phone' },
+        { name: 'iPad Mini', w: 768, h: 1024, cat: 'tablet' },
+        { name: 'iPad Air', w: 820, h: 1180, cat: 'tablet' },
+        { name: 'iPad Pro 12.9"', w: 1024, h: 1366, cat: 'tablet' },
+        { name: 'Surface Pro', w: 912, h: 1368, cat: 'tablet' },
+        { name: 'Laptop HD', w: 1366, h: 768, cat: 'desktop' },
+        { name: 'Desktop FHD', w: 1920, h: 1080, cat: 'desktop' },
+        { name: 'Desktop QHD', w: 2560, h: 1440, cat: 'desktop' },
+        { name: 'Ultrawide', w: 3440, h: 1440, cat: 'desktop' },
+      ];
+
+      const CATS = [
+        { key: 'phone', label: 'Phones' },
+        { key: 'tablet', label: 'Tablets' },
+        { key: 'desktop', label: 'Desktops' },
+        { key: 'custom', label: 'Custom' },
+      ];
+
+      // ─── Parse params ───
+      const params = new URLSearchParams(window.location.search);
+      const url = params.get('url');
+      const initialW = parseInt(params.get('w')) || 390;
+      const initialH = parseInt(params.get('h')) || 844;
+      const initialDevice = params.get('device') || 'Preview';
+
+      if (!url) {
+        document.getElementById('errorOverlay').classList.add('visible');
+        document.querySelector('.error-title').textContent = 'No URL provided';
+        document.querySelector('.error-desc').textContent = 'This preview link is missing a URL parameter.';
+        return;
+      }
+
+      // ─── State ───
+      let currentW = initialW;
+      let currentH = initialH;
+      let currentDeviceName = initialDevice;
+      let isCustom = false;
+      let customW = 1280;
+      let customH = 720;
+      let activeModalTab = 'phone';
+
+      // Try to match the initial device
+      var matchedDevice = DEVICES.find(function (d) { return d.name === initialDevice; });
+      if (!matchedDevice) {
+        matchedDevice = DEVICES.find(function (d) { return d.w === initialW && d.h === initialH; });
+      }
+      if (matchedDevice) {
+        currentDeviceName = matchedDevice.name;
+        currentW = matchedDevice.w;
+        currentH = matchedDevice.h;
+        activeModalTab = matchedDevice.cat;
+      } else {
+        // No match — treat as custom
+        isCustom = true;
+        customW = initialW;
+        customH = initialH;
+        activeModalTab = 'custom';
+      }
+
+      // ─── DOM refs ───
+      var canvas = document.getElementById('canvas');
+      var shell = document.getElementById('frameShell');
+      var openBtn = document.getElementById('openBtn');
+      var errBtn = document.getElementById('errorOpenBtn');
+      var overlay = document.getElementById('errorOverlay');
+      var selName = document.getElementById('selName');
+      var selDims = document.getElementById('selDims');
+      var backdrop = document.getElementById('modalBackdrop');
+      var modal = document.getElementById('modal');
+      var modalTabs = document.getElementById('modalTabs');
+      var modalBody = document.getElementById('modalBody');
+
+      openBtn.href = url;
+      errBtn.href = url;
+
+      function updatePageTitle() {
+        document.title = currentDeviceName + ' Preview \u2014 dMood Labs';
+      }
+      updatePageTitle();
+
+      function updateSelector() {
+        selName.textContent = currentDeviceName;
+        selDims.textContent = currentW + ' \u00d7 ' + currentH;
+      }
+      updateSelector();
+
+      // ─── Modal ───
+      function openModal() {
+        backdrop.classList.add('open');
+        renderModalTabs();
+        renderModalBody();
+      }
+
+      function closeModal() {
+        backdrop.classList.remove('open');
+      }
+
+      document.getElementById('selectorBtn').addEventListener('click', openModal);
+      document.getElementById('modalClose').addEventListener('click', closeModal);
+
+      // Close on backdrop click (not modal itself)
+      backdrop.addEventListener('click', function (e) {
+        if (e.target === backdrop) closeModal();
+      });
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeModal();
+      });
+
+      // Prevent modal clicks from closing
+      modal.addEventListener('click', function (e) {
+        e.stopPropagation();
+      });
+
+      function renderModalTabs() {
+        modalTabs.innerHTML = CATS.map(function (c) {
+          return '<button class="modal-tab' + (c.key === activeModalTab ? ' active' : '') + '" data-tab="' + c.key + '">' + c.label + '</button>';
+        }).join('');
+      }
+
+      modalTabs.addEventListener('click', function (e) {
+        var tab = e.target.closest('.modal-tab');
+        if (!tab) return;
+        activeModalTab = tab.dataset.tab;
+        renderModalTabs();
+        renderModalBody();
+      });
+
+      function renderModalBody() {
+        if (activeModalTab === 'custom') {
+          modalBody.innerHTML =
+            '<div class="custom-panel">' +
+            '<div class="custom-row">' +
+            '<div class="custom-field">' +
+            '<label class="custom-field-label">Width (px)</label>' +
+            '<input class="custom-field-input" type="number" id="modalCW" value="' + customW + '">' +
+            '</div>' +
+            '<div class="custom-field">' +
+            '<label class="custom-field-label">Height (px)</label>' +
+            '<input class="custom-field-input" type="number" id="modalCH" value="' + customH + '">' +
+            '</div>' +
+            '</div>' +
+            '<div class="custom-presets-label">Quick presets</div>' +
+            '<div class="custom-presets">' +
+            '<button class="custom-preset" data-w="1280" data-h="720">HD 1280\u00d7720</button>' +
+            '<button class="custom-preset" data-w="1920" data-h="1080">FHD 1920\u00d71080</button>' +
+            '<button class="custom-preset" data-w="2560" data-h="1440">QHD 2560\u00d71440</button>' +
+            '<button class="custom-preset" data-w="3840" data-h="2160">4K 3840\u00d72160</button>' +
+            '</div>' +
+            '<button class="custom-apply" id="customApply">Apply Custom Size</button>' +
+            '</div>';
+
+          // Preset buttons
+          var presets = modalBody.querySelectorAll('.custom-preset');
+          for (var i = 0; i < presets.length; i++) {
+            presets[i].addEventListener('click', function () {
+              var cw = document.getElementById('modalCW');
+              var ch = document.getElementById('modalCH');
+              if (cw) cw.value = this.dataset.w;
+              if (ch) ch.value = this.dataset.h;
+            });
+          }
+
+          // Apply button
+          document.getElementById('customApply').addEventListener('click', function () {
+            var w = parseInt(document.getElementById('modalCW').value) || 1280;
+            var h = parseInt(document.getElementById('modalCH').value) || 720;
+            customW = w;
+            customH = h;
+            currentW = w;
+            currentH = h;
+            currentDeviceName = 'Custom ' + w + '\u00d7' + h;
+            isCustom = true;
+            updateSelector();
+            updatePageTitle();
+            currentZoomIndex = null;
+            render();
+            closeModal();
+          });
+          return;
+        }
+
+        // Device list for a category
+        var devices = DEVICES.filter(function (d) { return d.cat === activeModalTab; });
+        var html = '';
+        for (var i = 0; i < devices.length; i++) {
+          var d = devices[i];
+          var active = !isCustom && d.name === currentDeviceName;
+          html += '<button class="md-device' + (active ? ' active' : '') + '" data-name="' + d.name + '">';
+          html += '<span class="md-icon">' + ICONS[d.cat] + '</span>';
+          html += '<div class="md-info"><span class="md-name">' + d.name + '</span><span class="md-dims">' + d.w + ' \u00d7 ' + d.h + '</span></div>';
+          if (active) html += '<div class="md-dot"></div>';
+          html += '</button>';
+        }
+        modalBody.innerHTML = html;
+      }
+
+      // Device selection via delegation
+      modalBody.addEventListener('click', function (e) {
+        var btn = e.target.closest('.md-device');
+        if (!btn) return;
+        var name = btn.dataset.name;
+        var device = DEVICES.find(function (d) { return d.name === name; });
+        if (!device) return;
+
+        currentDeviceName = device.name;
+        currentW = device.w;
+        currentH = device.h;
+        isCustom = false;
+
+        updateSelector();
+        updatePageTitle();
+        currentZoomIndex = null;
+        render();
+        closeModal();
+      });
+
+      // ─── Zoom state ───
+      var ZOOM_STEPS = [0.15, 0.2, 0.25, 0.33, 0.5, 0.67, 0.75, 0.85, 1, 1.25, 1.5];
+      var currentZoomIndex = null;
+      var autoScale = 0.5;
+
+      function calcAutoScale() {
+        var rect = canvas.getBoundingClientRect();
+        var s = Math.min((rect.width - 60) / currentW, (rect.height - 60) / currentH, 1);
+        return Math.max(s, 0.1);
+      }
+
+      function getScale() {
+        if (currentZoomIndex !== null) return ZOOM_STEPS[currentZoomIndex];
+        return autoScale;
+      }
+
+      function render() {
+        autoScale = calcAutoScale();
+        var s = getScale();
+
+        shell.style.width = (currentW * s) + 'px';
+        shell.style.height = (currentH * s) + 'px';
+
+        var iframe = shell.querySelector('iframe');
+        if (iframe) {
+          iframe.style.width = currentW + 'px';
+          iframe.style.height = currentH + 'px';
+          iframe.style.transform = 'scale(' + s + ')';
+        }
+
+        document.getElementById('zoomLevel').textContent = Math.round(s * 100) + '%';
+
+        positionOverlay();
+        renderMarkers();
+      }
+
+      // ─── Create iframe ───
+      var iframe = document.createElement('iframe');
+      iframe.src = url;
+      iframe.title = 'Preview';
+      iframe.setAttribute('referrerpolicy', 'no-referrer');
+      iframe.setAttribute('allow', 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture');
+      iframe.style.background = '#fff';
+      iframe.style.display = 'block';
+      iframe.style.border = 'none';
+      iframe.style.transformOrigin = 'top left';
+      iframe.style.width = currentW + 'px';
+      iframe.style.height = currentH + 'px';
+
+      var loadTimer = setTimeout(function () {
+        overlay.classList.add('visible');
+      }, 10000);
+
+      iframe.onload = function () {
+        clearTimeout(loadTimer);
+      };
+      iframe.onerror = function () {
+        clearTimeout(loadTimer);
+        overlay.classList.add('visible');
+      };
+
+      shell.appendChild(iframe);
+      render();
+
+      // ─── Zoom buttons ───
+      document.getElementById('zoomIn').addEventListener('click', function () {
+        var current = getScale();
+        if (currentZoomIndex === null) {
+          currentZoomIndex = ZOOM_STEPS.findIndex(function (s) { return s > current; });
+          if (currentZoomIndex === -1) currentZoomIndex = ZOOM_STEPS.length - 1;
+        } else if (currentZoomIndex < ZOOM_STEPS.length - 1) {
+          currentZoomIndex++;
+        }
+        render();
+      });
+
+      document.getElementById('zoomOut').addEventListener('click', function () {
+        var current = getScale();
+        if (currentZoomIndex === null) {
+          for (var i = ZOOM_STEPS.length - 1; i >= 0; i--) {
+            if (ZOOM_STEPS[i] < current - 0.01) { currentZoomIndex = i; break; }
+          }
+          if (currentZoomIndex === null) currentZoomIndex = 0;
+        } else if (currentZoomIndex > 0) {
+          currentZoomIndex--;
+        }
+        render();
+      });
+
+      document.getElementById('zoomLevel').addEventListener('dblclick', function () {
+        currentZoomIndex = null;
+        render();
+      });
+
+      // ─── Resize ───
+      var rt;
+      window.addEventListener('resize', function () {
+        clearTimeout(rt);
+        rt = setTimeout(render, 80);
+      });
+
+      // ═══════════════════════════════════════════════
+      // ─── Firebase + Comment System ───
+      // ═══════════════════════════════════════════════
+
+      // ─── Firebase init ───
+      // TODO: Replace with your Firebase project config
+      var firebaseConfig = {
+        apiKey: "AIzaSyAosC2l0YvIoSHoX2iIiQNRNGl-2uk1I_4",
+        authDomain: "dmood-deviceview.firebaseapp.com",
+        databaseURL: "https://dmood-deviceview-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "dmood-deviceview",
+        storageBucket: "dmood-deviceview.firebasestorage.app",
+        messagingSenderId: "528636137555",
+        appId: "1:528636137555:web:b798aefbab8ca8456ef6a6",
+        measurementId: "G-XRT5L1LLXH"
+      };
+
+      var firebaseReady = false;
+      var commentsRef = null;
+      try {
+        if (typeof firebase !== 'undefined' && firebase.initializeApp) {
+          firebase.initializeApp(firebaseConfig);
+          var db = firebase.database();
+          var shareId = (function () {
+            var raw = (url || '') + '|' + initialW + '|' + initialH;
+            return btoa(raw).replace(/[^a-zA-Z0-9]/g, '').substring(0, 40);
+          })();
+          commentsRef = db.ref('comments/' + shareId);
+          firebaseReady = true;
+        }
+      } catch (e) {
+        console.warn('Firebase init failed:', e);
+      }
+
+      // ─── Comment categories ───
+      var CATEGORIES = {
+        color: { icon: '\u{1F3A8}', label: 'Color' },
+        text: { icon: '\u{270F}\u{FE0F}', label: 'Text' },
+        layout: { icon: '\u{1F4D0}', label: 'Layout' },
+        content: { icon: '\u{1F4C4}', label: 'Content' },
+        bug: { icon: '\u{1F41B}', label: 'Bug' },
+        other: { icon: '\u{1F4AC}', label: 'Other' }
+      };
+
+      // ─── Comment state ───
+      var commentMode = false;
+      var comments = {};
+      var editingId = null;
+      var pendingClick = null;
+      var commentOverlay = document.getElementById('commentOverlay');
+      var commentForm = document.getElementById('commentForm');
+
+      // ─── Overlay positioning ───
+      function positionOverlay() {
+        if (!commentOverlay) return;
+        var shellRect = shell.getBoundingClientRect();
+        var canvasRect = canvas.getBoundingClientRect();
+        commentOverlay.style.left = (shellRect.left - canvasRect.left) + 'px';
+        commentOverlay.style.top = (shellRect.top - canvasRect.top) + 'px';
+        commentOverlay.style.width = shellRect.width + 'px';
+        commentOverlay.style.height = shellRect.height + 'px';
+      }
+
+      // ─── Toggle comment mode ───
+      var commentToggleBtn = document.getElementById('commentToggle');
+      commentToggleBtn.addEventListener('click', function () {
+        commentMode = !commentMode;
+        this.classList.toggle('active', commentMode);
+        commentOverlay.classList.toggle('active', commentMode);
+        if (commentMode) {
+          positionOverlay();
+          renderMarkers();
+        }
+        if (!commentMode) {
+          closeCommentForm();
+        }
+      });
+
+      // ─── Overlay click → place pin ───
+      commentOverlay.addEventListener('click', function (e) {
+        if (!commentMode) return;
+        if (e.target.closest('.comment-marker')) return;
+
+        var rect = this.getBoundingClientRect();
+        var xPx = e.clientX - rect.left;
+        var yPx = e.clientY - rect.top;
+        var s = getScale();
+        // Convert click position to percentage of UNSCALED device dimensions
+        var xPct = (xPx / s / currentW) * 100;
+        var yPct = (yPx / s / currentH) * 100;
+
+        pendingClick = { x: xPct, y: yPct };
+        editingId = null;
+        openCommentForm(e.clientX, e.clientY);
+      });
+
+      // ─── Comment form ───
+      function openCommentForm(screenX, screenY, existing) {
+        commentForm.style.display = 'block';
+
+        var formW = 340;
+        var left = Math.min(screenX + 16, window.innerWidth - formW - 16);
+        var top = Math.min(screenY - 20, window.innerHeight - 420);
+        left = Math.max(16, left);
+        top = Math.max(16, top);
+        commentForm.style.left = left + 'px';
+        commentForm.style.top = top + 'px';
+
+        // Reset
+        var chips = document.querySelectorAll('.comment-chip');
+        for (var i = 0; i < chips.length; i++) chips[i].classList.remove('active');
+        document.getElementById('commentDesc').value = '';
+        document.getElementById('commentDelete').style.display = 'none';
+        document.getElementById('commentFormTitle').textContent = 'Add Comment';
+
+        if (existing) {
+          document.getElementById('commentFormTitle').textContent = 'Edit Comment';
+          var matchChip = document.querySelector('.comment-chip[data-cat="' + existing.category + '"]');
+          if (matchChip) matchChip.classList.add('active');
+          document.getElementById('commentDesc').value = existing.description || '';
+          document.getElementById('commentAuthor').value = existing.author || '';
+          document.getElementById('commentDelete').style.display = 'inline-flex';
+        } else {
+          document.getElementById('commentAuthor').value = localStorage.getItem('dv_comment_author') || '';
+        }
+      }
+
+      function closeCommentForm() {
+        commentForm.style.display = 'none';
+        pendingClick = null;
+        editingId = null;
+      }
+
+      // Chip selection
+      document.getElementById('commentChips').addEventListener('click', function (e) {
+        var chip = e.target.closest('.comment-chip');
+        if (!chip) return;
+        var all = this.querySelectorAll('.comment-chip');
+        for (var i = 0; i < all.length; i++) all[i].classList.remove('active');
+        chip.classList.add('active');
+      });
+
+      // Cancel / Close
+      document.getElementById('commentCancel').addEventListener('click', closeCommentForm);
+      document.getElementById('commentFormClose').addEventListener('click', closeCommentForm);
+
+      // Submit
+      document.getElementById('commentSubmit').addEventListener('click', function () {
+        if (!firebaseReady) { alert('Firebase is not configured yet. Please add your Firebase config.'); return; }
+
+        var activeChip = document.querySelector('.comment-chip.active');
+        var category = activeChip ? activeChip.dataset.cat : null;
+        var description = document.getElementById('commentDesc').value.trim();
+        var author = document.getElementById('commentAuthor').value.trim();
+
+        // Validation
+        var valid = true;
+        if (!category) { document.getElementById('commentChips').style.outline = '1px solid #f87171'; valid = false; }
+        if (!description) { document.getElementById('commentDesc').style.borderColor = '#f87171'; valid = false; }
+        if (!author) { document.getElementById('commentAuthor').style.borderColor = '#f87171'; valid = false; }
+        if (!valid) {
+          setTimeout(function () {
+            document.getElementById('commentChips').style.outline = 'none';
+            document.getElementById('commentDesc').style.borderColor = '';
+            document.getElementById('commentAuthor').style.borderColor = '';
+          }, 1500);
+          return;
+        }
+
+        localStorage.setItem('dv_comment_author', author);
+        var now = Date.now();
+
+        if (editingId) {
+          commentsRef.child(editingId).update({
+            category: category,
+            description: description,
+            author: author,
+            updatedAt: now
+          });
+        } else if (pendingClick) {
+          commentsRef.push().set({
+            x: pendingClick.x,
+            y: pendingClick.y,
+            pageW: currentW,
+            pageH: currentH,
+            category: category,
+            description: description,
+            author: author,
+            createdAt: now,
+            updatedAt: now
+          });
+        }
+
+        closeCommentForm();
+      });
+
+      // Delete
+      document.getElementById('commentDelete').addEventListener('click', function () {
+        if (editingId && firebaseReady) {
+          commentsRef.child(editingId).remove();
+          closeCommentForm();
+        }
+      });
+
+      // ─── Render markers ───
+      function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      // ─── Drag state ───
+      var dragState = null;
+
+      function renderMarkers() {
+        if (!commentOverlay) return;
+        // Remove old markers
+        var old = commentOverlay.querySelectorAll('.comment-marker');
+        for (var i = 0; i < old.length; i++) old[i].remove();
+
+        var s = getScale();
+        var keys = Object.keys(comments);
+        for (var k = 0; k < keys.length; k++) {
+          var id = keys[k];
+          var c = comments[id];
+          if (!c) continue;
+          var cat = CATEGORIES[c.category] || CATEGORIES.other;
+
+          var leftPx = (c.x / 100) * currentW * s;
+          var topPx = (c.y / 100) * currentH * s;
+
+          var marker = document.createElement('div');
+          marker.className = 'comment-marker';
+          marker.dataset.id = id;
+          marker.style.left = leftPx + 'px';
+          marker.style.top = topPx + 'px';
+          marker.innerHTML = '<span>' + cat.icon + '</span>' +
+            '<div class="marker-tooltip"><strong>' + cat.label + '</strong><br>' + escapeHtml(c.description) +
+            '<br><span style="opacity:0.5;font-size:10px">' + escapeHtml(c.author || '') + '</span></div>';
+
+          (function (cid, markerEl) {
+            // Click to edit
+            markerEl.addEventListener('click', function (e) {
+              e.stopPropagation();
+              if (!commentMode) return;
+              if (dragState && dragState.moved) {
+                dragState = null;
+                return;
+              }
+              editingId = cid;
+              pendingClick = null;
+              openCommentForm(e.clientX, e.clientY, comments[cid]);
+            });
+
+            // Drag to move
+            markerEl.addEventListener('mousedown', function (e) {
+              if (!commentMode) return;
+              e.preventDefault();
+              e.stopPropagation();
+
+              var rect = commentOverlay.getBoundingClientRect();
+              dragState = {
+                id: cid,
+                moved: false,
+                startX: e.clientX,
+                startY: e.clientY
+              };
+            });
+          })(id, marker);
+
+          commentOverlay.appendChild(marker);
+        }
+      }
+
+      // Global mouse move/up for dragging
+      document.addEventListener('mousemove', function (e) {
+        if (!dragState || !commentMode) return;
+
+        var dx = Math.abs(e.clientX - dragState.startX);
+        var dy = Math.abs(e.clientY - dragState.startY);
+        if (dx > 3 || dy > 3) dragState.moved = true;
+
+        var rect = commentOverlay.getBoundingClientRect();
+        var xPx = e.clientX - rect.left;
+        var yPx = e.clientY - rect.top;
+        var s = getScale();
+
+        // Clamp to overlay bounds
+        xPx = Math.max(0, Math.min(xPx, rect.width));
+        yPx = Math.max(0, Math.min(yPx, rect.height));
+
+        // Convert to percentage of UNSCALED device dimensions
+        var xPct = (xPx / s / currentW) * 100;
+        var yPct = (yPx / s / currentH) * 100;
+
+        // Update marker position visually
+        var marker = commentOverlay.querySelector('.comment-marker[data-id="' + dragState.id + '"]');
+        if (marker) {
+          marker.style.left = xPx + 'px';
+          marker.style.top = yPx + 'px';
+        }
+
+        dragState.finalX = xPct;
+        dragState.finalY = yPct;
+      });
+
+      document.addEventListener('mouseup', function (e) {
+        if (!dragState || !commentMode || !firebaseReady) {
+          dragState = null;
+          return;
+        }
+
+        if (dragState.moved && dragState.finalX !== undefined) {
+          // Update position in Firebase
+          commentsRef.child(dragState.id).update({
+            x: dragState.finalX,
+            y: dragState.finalY,
+            updatedAt: Date.now()
+          });
+        }
+
+        dragState = null;
+      });
+
+      // ─── Firebase real-time listener ───
+      if (firebaseReady && commentsRef) {
+        commentsRef.on('value', function (snapshot) {
+          comments = snapshot.val() || {};
+          renderMarkers();
+        });
+      }
+
+      // Close comment form on Escape
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && commentForm.style.display !== 'none') {
+          closeCommentForm();
+        }
+      });
+
+    })();
+  </script>
+</body>
+
+</html>
