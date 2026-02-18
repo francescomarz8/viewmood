@@ -673,99 +673,100 @@
       // ─── SPA page tracking ───
       var currentPageId = 'page-default';
       var isCrossOrigin = false;
+      var lastKnownFingerprint = null;
 
       function getPageId() {
-        try {
-          var iframe = shell.querySelector('iframe');
-          if (!iframe || !iframe.contentWindow) return 'page-default';
+        var iframe = shell.querySelector('iframe');
+        if (!iframe || !iframe.contentWindow) return 'page-default';
 
+        // Try same-origin access first
+        try {
           var iframeDoc = iframe.contentWindow.document;
           var iframeUrl = iframe.contentWindow.location.href;
           var iframeTitle = iframeDoc.title || '';
 
-          // Same-origin: use URL + title
+          // Same-origin: use URL + title + DOM fingerprint
           isCrossOrigin = false;
-          var pageKey = iframeUrl + '|' + iframeTitle;
+          console.log('Same-origin detected, URL:', iframeUrl);
+
+          // Create fingerprint from DOM
+          var fingerprint = [];
+          var headings = iframeDoc.querySelectorAll('h1, h2, h3');
+          for (var i = 0; i < Math.min(headings.length, 5); i++) {
+            var text = (headings[i].textContent || '').trim().substring(0, 50);
+            if (text) fingerprint.push(text);
+          }
+
+          var pageKey = iframeUrl + '|' + iframeTitle + '|' + fingerprint.join('|');
           var hash = 0;
           for (var i = 0; i < pageKey.length; i++) {
             var chr = pageKey.charCodeAt(i);
             hash = ((hash << 5) - hash) + chr;
             hash |= 0;
           }
-          return 'page-' + Math.abs(hash).toString(36);
-        } catch (e) {
-          // Cross-origin: use visual fingerprint
-          isCrossOrigin = true;
-          return getVisualPageId();
-        }
-      }
 
-      function getVisualPageId() {
-        try {
-          var iframe = shell.querySelector('iframe');
-          if (!iframe || !iframe.contentWindow || !iframe.contentWindow.document) {
-            return 'page-default';
-          }
-
-          var doc = iframe.contentWindow.document;
-          var fingerprint = [];
-
-          // Collect visible headings text
-          var headings = doc.querySelectorAll('h1, h2, h3');
-          for (var i = 0; i < Math.min(headings.length, 5); i++) {
-            var text = (headings[i].textContent || '').trim().substring(0, 50);
-            if (text) fingerprint.push(text);
-          }
-
-          // Collect first paragraph
-          var firstP = doc.querySelector('p');
-          if (firstP) {
-            var pText = (firstP.textContent || '').trim().substring(0, 30);
-            if (pText) fingerprint.push(pText);
-          }
-
-          // Collect navigation items
-          var navLinks = doc.querySelectorAll('nav a, [role="navigation"] a');
-          var navTexts = [];
-          for (var j = 0; j < Math.min(navLinks.length, 3); j++) {
-            var linkText = (navLinks[j].textContent || '').trim().substring(0, 20);
-            if (linkText) navTexts.push(linkText);
-          }
-          if (navTexts.length > 0) fingerprint.push(navTexts.join('|'));
-
-          // Create hash from fingerprint
-          if (fingerprint.length === 0) return 'page-default';
-
-          var pageKey = fingerprint.join('||');
-          var hash = 0;
-          for (var k = 0; k < pageKey.length; k++) {
-            var chr = pageKey.charCodeAt(k);
-            hash = ((hash << 5) - hash) + chr;
-            hash |= 0;
-          }
-
-          var pageId = 'page-visual-' + Math.abs(hash).toString(36);
-          console.log('Visual fingerprint:', fingerprint, '→', pageId);
+          var pageId = 'page-' + Math.abs(hash).toString(36);
+          console.log('Page fingerprint:', fingerprint.slice(0, 3), '→', pageId);
           return pageId;
         } catch (e) {
-          console.warn('Visual fingerprint failed:', e);
-          return 'page-default';
+          // Cross-origin: can't access iframe content at all
+          isCrossOrigin = true;
+          console.warn('Cross-origin iframe detected - page tracking disabled');
+
+          // For cross-origin, return a single pageId so all comments show together
+          // This is a limitation of browser security - we cannot detect page changes
+          return 'page-crossorigin-all';
         }
       }
 
       function updatePageId() {
         var newPageId = getPageId();
         if (newPageId !== currentPageId) {
+          console.log('Page changed from', currentPageId, 'to', newPageId);
           currentPageId = newPageId;
           renderMarkers();
           renderFeedbackList();
         }
       }
 
-      // Monitor iframe for page changes
+      // Monitor iframe for page changes - check frequently
       var pageCheckInterval = setInterval(function() {
         updatePageId();
-      }, 500);
+      }, 300);
+
+      // Also check on user interaction (mouse movement over iframe)
+      var lastCheckTime = 0;
+      var interactionCheckDelay = 200; // ms
+
+      shell.addEventListener('mouseenter', function() {
+        var now = Date.now();
+        if (now - lastCheckTime > interactionCheckDelay) {
+          lastCheckTime = now;
+          updatePageId();
+        }
+      });
+
+      // Aggressive check when iframe might have navigated
+      var lastPageCheck = '';
+      var aggressiveCheckInterval = setInterval(function() {
+        try {
+          var iframe = shell.querySelector('iframe');
+          if (!iframe || !iframe.contentWindow) return;
+
+          // Try to detect DOM changes by comparing document.body innerHTML length
+          var doc = iframe.contentWindow.document;
+          if (doc && doc.body) {
+            var currentCheck = doc.body.innerHTML.length + '-' + (doc.title || '');
+            if (currentCheck !== lastPageCheck && lastPageCheck !== '') {
+              lastPageCheck = currentCheck;
+              updatePageId();
+            }
+            lastPageCheck = currentCheck;
+          }
+        } catch (e) {
+          // Cross-origin - will use visual fingerprint anyway
+        }
+      }, 300);
 
       // ─── Render ───
       function calcAutoScale() {

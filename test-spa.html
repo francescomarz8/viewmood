@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test SPA - Page Tracking Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    h1 {
+      font-size: 36px;
+      margin-bottom: 16px;
+      color: #1a202c;
+    }
+
+    h2 {
+      font-size: 24px;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      color: #2d3748;
+    }
+
+    h3 {
+      font-size: 18px;
+      margin-top: 16px;
+      margin-bottom: 8px;
+      color: #4a5568;
+    }
+
+    p {
+      line-height: 1.6;
+      color: #4a5568;
+      margin-bottom: 16px;
+    }
+
+    nav {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    nav a {
+      padding: 8px 16px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    nav a:hover {
+      background: #5a67d8;
+    }
+
+    nav a.active {
+      background: #764ba2;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .highlight {
+      background: #fef3c7;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <nav>
+      <a href="#home" class="nav-link active" data-page="home">Home</a>
+      <a href="#about" class="nav-link" data-page="about">About</a>
+      <a href="#services" class="nav-link" data-page="services">Services</a>
+      <a href="#contact" class="nav-link" data-page="contact">Contact</a>
+    </nav>
+
+    <div class="page active" id="home">
+      <h1>Welcome to Page Tracking Demo</h1>
+      <h2>Testing Same-Origin Detection</h2>
+      <p>This is a <span class="highlight">test page</span> to verify that DeviceView's page tracking system works correctly for same-origin iframes.</p>
+      <h3>How to Test</h3>
+      <p>1. Load this page in DeviceView</p>
+      <p>2. Enable comment mode (press C or click Comment button)</p>
+      <p>3. Add a comment on this Home page</p>
+      <p>4. Navigate to About or Services using the navigation above</p>
+      <p>5. The comment should disappear (it's on the Home page only)</p>
+      <p>6. Add a different comment on the new page</p>
+      <p>7. Navigate back to Home - you should see only the Home comment</p>
+    </div>
+
+    <div class="page" id="about">
+      <h1>About This Demo</h1>
+      <h2>Page Tracking Technology</h2>
+      <p>This demo uses a <span class="highlight">visual fingerprinting system</span> that identifies pages by their content.</p>
+      <h3>How It Works</h3>
+      <p>The system creates a unique fingerprint for each page by sampling:</p>
+      <p>• Page URL and title</p>
+      <p>• H1, H2, H3 heading text content</p>
+      <p>• First paragraph content</p>
+      <p>This fingerprint creates a unique page ID that persists across sessions.</p>
+    </div>
+
+    <div class="page" id="services">
+      <h1>Our Services</h1>
+      <h2>DeviceView Features</h2>
+      <p>DeviceView provides <span class="highlight">comprehensive device preview capabilities</span> for web designers and developers.</p>
+      <h3>Key Features</h3>
+      <p>• Multi-device viewport testing</p>
+      <p>• Real-time comment collaboration</p>
+      <p>• Page-specific feedback tracking</p>
+      <p>• Shareable preview links</p>
+      <p>• Firebase real-time sync</p>
+    </div>
+
+    <div class="page" id="contact">
+      <h1>Get In Touch</h1>
+      <h2>Contact Information</h2>
+      <p>Want to learn more about <span class="highlight">DeviceView</span>? Reach out to us!</p>
+      <h3>dMood Labs</h3>
+      <p>Email: hello@dmoodlabs.com</p>
+      <p>Website: dmoodlabs.com</p>
+      <p>This page demonstrates that comments are tracked per-page, even in a single-page application.</p>
+    </div>
+  </div>
+
+  <script>
+    // Simple SPA navigation
+    const navLinks = document.querySelectorAll('.nav-link');
+    const pages = document.querySelectorAll('.page');
+
+    navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const pageId = link.dataset.page;
+
+        // Update active states
+        navLinks.forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+
+        pages.forEach(p => p.classList.remove('active'));
+        document.getElementById(pageId).classList.add('active');
+
+        // Update URL hash
+        window.location.hash = pageId;
+      });
+    });
+
+    // Handle initial hash
+    window.addEventListener('load', () => {
+      const hash = window.location.hash.slice(1) || 'home';
+      const targetLink = document.querySelector(`[data-page="${hash}"]`);
+      if (targetLink) targetLink.click();
+    });
+  </script>
+</body>
+</html>
