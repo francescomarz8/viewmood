@@ -212,12 +212,21 @@
       justify-content: center;
       font-size: 12px;
       line-height: 1;
-      opacity: 0.55;
+      opacity: 0.75;
       cursor: pointer;
       pointer-events: auto;
       transform: translate(-50%, -50%);
       transition: opacity 0.15s, transform 0.15s;
       z-index: 21;
+    }
+
+    .comment-marker svg {
+      color: var(--accent);
+      stroke: var(--accent);
+    }
+
+    .comment-marker.hidden {
+      display: none;
     }
 
     .comment-marker:hover {
@@ -312,25 +321,76 @@
     .feedback-item {
       padding: 10px 16px;
       border-top: 1px solid rgba(255, 255, 255, 0.03);
-      cursor: pointer;
       transition: background 0.1s;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
     .feedback-item:hover {
       background: rgba(255, 255, 255, 0.02);
     }
 
+    .feedback-item-top {
+      display: flex;
+      align-items: start;
+      gap: 8px;
+      cursor: pointer;
+    }
+
     .feedback-item-desc {
       font-size: 12px;
       color: var(--text-2);
       line-height: 1.5;
-      margin-bottom: 4px;
+      flex: 1;
     }
 
     .feedback-item-meta {
       font-size: 10px;
       color: var(--text-3);
       font-family: var(--mono);
+    }
+
+    .feedback-item-actions {
+      display: flex;
+      gap: 4px;
+      margin-top: 2px;
+    }
+
+    .feedback-item-btn {
+      padding: 3px 10px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      color: var(--text-3);
+      font-size: 10px;
+      font-weight: 500;
+      font-family: var(--sans);
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .feedback-item-btn:hover {
+      border-color: var(--border-2);
+      color: var(--text-2);
+    }
+
+    .feedback-item-btn svg {
+      width: 11px;
+      height: 11px;
+      flex-shrink: 0;
+    }
+
+    .feedback-item.solved {
+      opacity: 0.5;
+    }
+
+    .feedback-item.solved .feedback-item-desc {
+      text-decoration: line-through;
+      color: var(--text-3);
     }
 
     .feedback-empty {
@@ -581,15 +641,131 @@
 
       // ─── Categories ───
       var CATEGORIES = {
-        color: { icon: '\u{1F3A8}', label: 'Color' },
-        text: { icon: '\u{270F}\u{FE0F}', label: 'Text' },
-        layout: { icon: '\u{1F4D0}', label: 'Layout' },
-        content: { icon: '\u{1F4C4}', label: 'Content' },
-        bug: { icon: '\u{1F41B}', label: 'Bug' },
-        other: { icon: '\u{1F4AC}', label: 'Other' }
+        color: {
+          icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>',
+          label: 'Color'
+        },
+        text: {
+          icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
+          label: 'Text'
+        },
+        layout: {
+          icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>',
+          label: 'Layout'
+        },
+        content: {
+          icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>',
+          label: 'Content'
+        },
+        bug: {
+          icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>',
+          label: 'Bug'
+        },
+        other: {
+          icon: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>',
+          label: 'Other'
+        }
       };
 
       var comments = {};
+      var hiddenComments = JSON.parse(localStorage.getItem('dv_hidden_' + url) || '{}');
+
+      // ─── SPA page tracking ───
+      var currentPageId = 'page-default';
+      var isCrossOrigin = false;
+
+      function getPageId() {
+        try {
+          var iframe = shell.querySelector('iframe');
+          if (!iframe || !iframe.contentWindow) return 'page-default';
+
+          var iframeDoc = iframe.contentWindow.document;
+          var iframeUrl = iframe.contentWindow.location.href;
+          var iframeTitle = iframeDoc.title || '';
+
+          // Same-origin: use URL + title
+          isCrossOrigin = false;
+          var pageKey = iframeUrl + '|' + iframeTitle;
+          var hash = 0;
+          for (var i = 0; i < pageKey.length; i++) {
+            var chr = pageKey.charCodeAt(i);
+            hash = ((hash << 5) - hash) + chr;
+            hash |= 0;
+          }
+          return 'page-' + Math.abs(hash).toString(36);
+        } catch (e) {
+          // Cross-origin: use visual fingerprint
+          isCrossOrigin = true;
+          return getVisualPageId();
+        }
+      }
+
+      function getVisualPageId() {
+        try {
+          var iframe = shell.querySelector('iframe');
+          if (!iframe || !iframe.contentWindow || !iframe.contentWindow.document) {
+            return 'page-default';
+          }
+
+          var doc = iframe.contentWindow.document;
+          var fingerprint = [];
+
+          // Collect visible headings text
+          var headings = doc.querySelectorAll('h1, h2, h3');
+          for (var i = 0; i < Math.min(headings.length, 5); i++) {
+            var text = (headings[i].textContent || '').trim().substring(0, 50);
+            if (text) fingerprint.push(text);
+          }
+
+          // Collect first paragraph
+          var firstP = doc.querySelector('p');
+          if (firstP) {
+            var pText = (firstP.textContent || '').trim().substring(0, 30);
+            if (pText) fingerprint.push(pText);
+          }
+
+          // Collect navigation items
+          var navLinks = doc.querySelectorAll('nav a, [role="navigation"] a');
+          var navTexts = [];
+          for (var j = 0; j < Math.min(navLinks.length, 3); j++) {
+            var linkText = (navLinks[j].textContent || '').trim().substring(0, 20);
+            if (linkText) navTexts.push(linkText);
+          }
+          if (navTexts.length > 0) fingerprint.push(navTexts.join('|'));
+
+          // Create hash from fingerprint
+          if (fingerprint.length === 0) return 'page-default';
+
+          var pageKey = fingerprint.join('||');
+          var hash = 0;
+          for (var k = 0; k < pageKey.length; k++) {
+            var chr = pageKey.charCodeAt(k);
+            hash = ((hash << 5) - hash) + chr;
+            hash |= 0;
+          }
+
+          var pageId = 'page-visual-' + Math.abs(hash).toString(36);
+          console.log('Visual fingerprint:', fingerprint, '→', pageId);
+          return pageId;
+        } catch (e) {
+          console.warn('Visual fingerprint failed:', e);
+          return 'page-default';
+        }
+      }
+
+      function updatePageId() {
+        var newPageId = getPageId();
+        if (newPageId !== currentPageId) {
+          currentPageId = newPageId;
+          renderMarkers();
+          renderFeedbackList();
+        }
+      }
+
+      // Monitor iframe for page changes
+      var pageCheckInterval = setInterval(function() {
+        updatePageId();
+      }, 500);
 
       // ─── Render ───
       function calcAutoScale() {
@@ -644,7 +820,15 @@
         overlay.classList.add('visible');
       }, 10000);
 
-      iframe.onload = function () { clearTimeout(loadTimer); };
+      iframe.onload = function () {
+        clearTimeout(loadTimer);
+        // Initialize page ID after iframe loads
+        setTimeout(function() {
+          currentPageId = getPageId();
+          renderMarkers();
+          renderFeedbackList();
+        }, 300);
+      };
       iframe.onerror = function () { clearTimeout(loadTimer); overlay.classList.add('visible'); };
 
       shell.appendChild(iframe);
@@ -674,6 +858,14 @@
           var id = keys[k];
           var c = comments[id];
           if (!c) continue;
+
+          // Filter by current page - only show comments for the current SPA page
+          var commentPageId = c.pageId || 'page-default';
+          if (commentPageId !== currentPageId) continue;
+
+          // Skip hidden comments - they won't show as markers
+          if (hiddenComments[id]) continue;
+
           var cat = CATEGORIES[c.category] || CATEGORIES.other;
 
           var leftPx = (c.x / 100) * currentW * currentScale;
@@ -699,50 +891,121 @@
         var list = document.getElementById('feedbackList');
         var count = document.getElementById('feedbackCount');
         var keys = Object.keys(comments);
-        count.textContent = keys.length;
+        var visibleCount = keys.filter(function(k) { return !hiddenComments[k]; }).length;
+        count.textContent = visibleCount;
 
         if (keys.length === 0) {
           list.innerHTML = '<div class="feedback-empty">No feedback yet. Comments added by reviewers will appear here in real time.</div>';
           return;
         }
 
-        // Group by category
-        var groups = {};
+        // Separate active and hidden comments
+        var activeItems = [];
+        var hiddenItems = [];
+
         for (var i = 0; i < keys.length; i++) {
           var c = comments[keys[i]];
-          var catKey = c.category || 'other';
-          if (!groups[catKey]) groups[catKey] = [];
-          groups[catKey].push({ id: keys[i], data: c });
+          var item = { id: keys[i], data: c };
+          if (hiddenComments[keys[i]]) {
+            hiddenItems.push(item);
+          } else {
+            activeItems.push(item);
+          }
         }
 
         var html = '';
-        for (var j = 0; j < CAT_ORDER.length; j++) {
-          var gk = CAT_ORDER[j];
-          if (!groups[gk]) continue;
-          var cat = CATEGORIES[gk];
-          // Sort by createdAt descending
-          groups[gk].sort(function (a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
 
-          html += '<div class="feedback-group-title">' + cat.icon + ' ' + cat.label + ' (' + groups[gk].length + ')</div>';
-          for (var k = 0; k < groups[gk].length; k++) {
-            var item = groups[gk][k];
-            var date = new Date(item.data.createdAt || 0);
-            var timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            html += '<div class="feedback-item" data-id="' + item.id + '">';
-            html += '<div class="feedback-item-desc">' + escapeHtml(item.data.description) + '</div>';
-            html += '<div class="feedback-item-meta">' + escapeHtml(item.data.author || '') + ' \u00b7 ' + timeStr + '</div>';
-            html += '</div>';
+        // Render active comments grouped by category (only for current page)
+        var pageActiveItems = activeItems.filter(function(item) {
+          var commentPageId = item.data.pageId || 'page-default';
+          return commentPageId === currentPageId;
+        });
+
+        if (pageActiveItems.length > 0) {
+          var groups = {};
+          for (var i = 0; i < pageActiveItems.length; i++) {
+            var c = pageActiveItems[i].data;
+            var catKey = c.category || 'other';
+            if (!groups[catKey]) groups[catKey] = [];
+            groups[catKey].push(pageActiveItems[i]);
+          }
+
+          for (var j = 0; j < CAT_ORDER.length; j++) {
+            var gk = CAT_ORDER[j];
+            if (!groups[gk]) continue;
+            var cat = CATEGORIES[gk];
+            groups[gk].sort(function (a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
+
+            html += '<div class="feedback-group-title">' + cat.icon + ' ' + cat.label + ' (' + groups[gk].length + ')</div>';
+            for (var k = 0; k < groups[gk].length; k++) {
+              html += renderFeedbackItem(groups[gk][k], false);
+            }
+          }
+        } else {
+          html += '<div class="feedback-empty">All comments are marked as solved.</div>';
+        }
+
+        // Render solved/hidden comments (only for current page)
+        var pageHiddenItems = hiddenItems.filter(function(item) {
+          var commentPageId = item.data.pageId || 'page-default';
+          return commentPageId === currentPageId;
+        });
+
+        if (pageHiddenItems.length > 0) {
+          html += '<div class="feedback-group-title">';
+          html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+          html += ' Solved (' + pageHiddenItems.length + ')</div>';
+          pageHiddenItems.sort(function (a, b) { return (b.data.createdAt || 0) - (a.data.createdAt || 0); });
+          for (var h = 0; h < pageHiddenItems.length; h++) {
+            html += renderFeedbackItem(pageHiddenItems[h], true);
           }
         }
 
         list.innerHTML = html;
       }
 
-      // Click feedback item → highlight marker
-      document.getElementById('feedbackList').addEventListener('click', function (e) {
-        var item = e.target.closest('.feedback-item');
-        if (!item) return;
-        var id = item.dataset.id;
+      function renderFeedbackItem(item, isSolved) {
+        var date = new Date(item.data.createdAt || 0);
+        var timeStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        var html = '<div class="feedback-item' + (isSolved ? ' solved' : '') + '" data-id="' + item.id + '">';
+        html += '<div class="feedback-item-top">';
+        html += '<div class="feedback-item-desc">' + escapeHtml(item.data.description) + '</div>';
+        html += '</div>';
+        html += '<div class="feedback-item-meta">' + escapeHtml(item.data.author || '') + ' \u00b7 ' + timeStr + '</div>';
+        html += '<div class="feedback-item-actions">';
+        if (isSolved) {
+          html += '<button class="feedback-item-btn" onclick="unhideComment(\'' + item.id + '\')">';
+          html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
+          html += 'Restore</button>';
+        } else {
+          html += '<button class="feedback-item-btn" onclick="highlightComment(\'' + item.id + '\')">';
+          html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>';
+          html += 'Locate</button>';
+          html += '<button class="feedback-item-btn" onclick="hideComment(\'' + item.id + '\')">';
+          html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+          html += 'Mark solved</button>';
+        }
+        html += '</div>';
+        html += '</div>';
+        return html;
+      }
+
+      // Functions to manage comment visibility
+      window.hideComment = function (id) {
+        hiddenComments[id] = true;
+        localStorage.setItem('dv_hidden_' + url, JSON.stringify(hiddenComments));
+        renderMarkers();
+        renderFeedbackList();
+      };
+
+      window.unhideComment = function (id) {
+        delete hiddenComments[id];
+        localStorage.setItem('dv_hidden_' + url, JSON.stringify(hiddenComments));
+        renderMarkers();
+        renderFeedbackList();
+      };
+
+      window.highlightComment = function (id) {
         var marker = commentOverlay.querySelector('.comment-marker[data-id="' + id + '"]');
         if (!marker) return;
 
@@ -751,8 +1014,12 @@
         for (var i = 0; i < all.length; i++) all[i].classList.remove('highlight');
 
         marker.classList.add('highlight');
+
+        // Scroll marker into view if needed
+        marker.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+
         setTimeout(function () { marker.classList.remove('highlight'); }, 1500);
-      });
+      };
 
       // ─── Firebase listener ───
       if (firebaseReady && commentsRef) {
