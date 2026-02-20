@@ -365,11 +365,23 @@
   <script>
     (function () {
       // ─── Parse params ───
-      var params = new URLSearchParams(window.location.search);
-      var url = params.get('url');
-      var currentW = parseInt(params.get('w')) || 390;
-      var currentH = parseInt(params.get('h')) || 844;
-      var currentDeviceName = params.get('device') || 'Preview';
+      // Support hash format: view.html#url|w|h|device
+      // Fallback to query params for backward compatibility
+      var url, currentW, currentH, currentDeviceName;
+      var hash = window.location.hash.substring(1); // remove #
+      if (hash && hash.indexOf('|') !== -1) {
+        var parts = hash.split('|');
+        url = parts[0];
+        currentW = parseInt(parts[1]) || 390;
+        currentH = parseInt(parts[2]) || 844;
+        currentDeviceName = parts[3] || 'Preview';
+      } else {
+        var params = new URLSearchParams(window.location.search);
+        url = params.get('url');
+        currentW = parseInt(params.get('w')) || 390;
+        currentH = parseInt(params.get('h')) || 844;
+        currentDeviceName = params.get('device') || 'Preview';
+      }
 
       if (!url) {
         document.getElementById('errorOverlay').classList.add('visible');

@@ -889,15 +889,8 @@
         ? `Custom ${w}×${h}`
         : (state.selectedDevice?.name || 'Preview');
 
-      const params = new URLSearchParams({
-        url: state.loadedUrl,
-        w: w,
-        h: h,
-        device: device,
-      });
-
       const basePath = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
-      const shareUrl = basePath + 'view.html?' + params.toString();
+      const shareUrl = basePath + 'view.html#' + state.loadedUrl + '|' + w + '|' + h + '|' + device;
 
       navigator.clipboard.writeText(shareUrl).then(() => {
         showToast('Share link copied to clipboard!');
