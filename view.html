@@ -135,27 +135,49 @@
     .btn-newtab {
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      padding: 7px 18px;
+      gap: 0;
+      padding: 5px 5px 5px 16px;
       background: var(--accent);
       color: #000;
       border: none;
-      border-radius: 8px;
+      border-radius: 999px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 500;
       font-family: var(--sans);
-      letter-spacing: 0.01em;
       cursor: pointer;
       text-decoration: none;
-      transition: opacity 0.15s;
+      transition: all 0.2s;
     }
 
     .btn-newtab:hover {
-      opacity: 0.85;
+      opacity: 0.9;
     }
 
-    .btn-newtab svg {
-      flex-shrink: 0;
+    .btn-newtab .btn-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 10px;
+      transition: all 0.2s;
+    }
+
+    .btn-newtab:hover .btn-icon {
+      background: #fff;
+    }
+
+    .btn-newtab .btn-icon svg {
+      color: var(--accent);
+      stroke: var(--accent);
+      transition: all 0.2s;
+    }
+
+    .btn-newtab:hover .btn-icon svg {
+      color: #000;
+      stroke: #000;
     }
 
     /* ─── Preview canvas ─── */
@@ -320,13 +342,13 @@
 
       <div class="topbar-right">
         <a class="btn-newtab" id="openBtn" href="#" target="_blank" rel="noopener noreferrer">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
           <span>Open in new tab</span>
+          <span class="btn-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7 7h10v10" /><path d="M7 17 17 7" />
+            </svg>
+          </span>
         </a>
       </div>
     </div>
@@ -345,19 +367,19 @@
         <p class="error-desc">This site may not allow embedding. You can open it directly instead.</p>
         <a class="btn-newtab" id="errorOpenBtn" href="#" target="_blank" rel="noopener noreferrer"
           style="margin-top:8px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            <polyline points="15 3 21 3 21 9" />
-            <line x1="10" y1="14" x2="21" y2="3" />
-          </svg>
           <span>Open in new tab</span>
+          <span class="btn-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7 7h10v10" /><path d="M7 17 17 7" />
+            </svg>
+          </span>
         </a>
       </div>
     </div>
 
     <div class="footer">
-      <span class="footer-text">Powered by <a href="/">dMood Labs</a></span>
+      <span class="footer-text">Powered by <a href="https://www.developermood.com/" target="_blank" rel="noopener noreferrer">Dmood</a></span>
     </div>
 
   </div>
@@ -368,7 +390,7 @@
       // Support hash format: view.html#url|w|h|device
       // Fallback to query params for backward compatibility
       var url, currentW, currentH, currentDeviceName;
-      var hash = window.location.hash.substring(1); // remove #
+      var hash = decodeURIComponent(window.location.hash.substring(1)); // remove # and decode
       if (hash && hash.indexOf('|') !== -1) {
         var parts = hash.split('|');
         url = parts[0];
