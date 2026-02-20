@@ -726,13 +726,6 @@
           </svg>
           Share
         </button>
-        <a class="btn-ghost" id="feedbackBtn" href="#" target="_blank" rel="noopener noreferrer" style="display:none">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          Feedback
-        </a>
       </div>
     </div>
 
@@ -905,11 +898,6 @@
 
       const basePath = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
       const shareUrl = basePath + 'view.html?' + params.toString();
-      const feedbackUrl = basePath + 'feedback.html?' + params.toString();
-
-      const fbBtn = document.getElementById('feedbackBtn');
-      fbBtn.href = feedbackUrl;
-      fbBtn.style.display = 'flex';
 
       navigator.clipboard.writeText(shareUrl).then(() => {
         showToast('Share link copied to clipboard!');
